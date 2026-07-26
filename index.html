@@ -9,69 +9,72 @@
 <meta name="apple-mobile-web-app-title" content="084">
 <title>084 하우개마을</title>
 <style>
+  /* iPhone 13 Pro (390 x 844) 기준 컴팩트 레이아웃 */
   * { box-sizing: border-box; }
   body {
-    margin: 0; background: #F6F2EA; color: #17130E;
+    margin: 0 auto; max-width: 430px;
+    background: #F6F2EA; color: #17130E;
     font-family: "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
-    padding: 22px 18px calc(46px + env(safe-area-inset-bottom));
+    padding: 12px 14px calc(16px + env(safe-area-inset-bottom));
     -webkit-text-size-adjust: 100%;
   }
-  .hdr { font-size: 11.5px; letter-spacing: 3px; color: #8A7A62; text-transform: uppercase; }
-  .row { display: flex; gap: 0; margin-top: 14px; }
+  .hdr { font-size: 10px; letter-spacing: 2.5px; color: #8A7A62; text-transform: uppercase; }
+  .row { display: flex; gap: 0; margin-top: 9px; }
   button {
-    flex: 1; padding: 12px 6px; background: transparent; color: #8A7A62;
-    border: none; border-bottom: 2px solid #DCD1BC; font-size: 14px;
+    flex: 1; padding: 9px 4px; background: transparent; color: #8A7A62;
+    border: none; border-bottom: 2px solid #DCD1BC; font-size: 13px;
     font-family: inherit; cursor: pointer;
   }
   button.on { color: #17130E; border-bottom-color: #17130E; font-weight: 700; }
   button.sm {
-    flex: none; padding: 7px 13px; font-size: 13px; color: #6A5E4C;
+    flex: none; padding: 5px 10px; font-size: 12px; color: #6A5E4C;
     border: 1px solid #CFC2A9; border-bottom-width: 1px; border-radius: 2px;
     background: #FBF8F2;
   }
+  /* iOS는 16px 미만 입력란에 포커스하면 화면을 확대한다 */
   input {
     background: #FBF8F2; color: #17130E; border: 1px solid #CFC2A9;
-    padding: 6px 8px; font-family: inherit; font-size: 14px; border-radius: 2px;
+    padding: 3px 6px; font-family: inherit; font-size: 16px; border-radius: 2px;
   }
-  input[type=number] { width: 50px; }
+  input[type=number] { width: 46px; }
+  input[type=time] { width: 104px; }
   .bar {
-    margin-top: 16px; font-size: 13px; color: #6A5E4C;
-    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    margin-top: 10px; font-size: 12px; color: #6A5E4C;
+    display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
   }
 
   /* 카드 */
-  .card { padding: 20px 0 18px; border-bottom: 1px solid #DCD1BC; }
-  .lbl { font-size: 12px; letter-spacing: 2px; color: #8A7A62; text-transform: uppercase; }
-  .big { font-size: 46px; line-height: 1; letter-spacing: -1.5px; margin-top: 8px; font-weight: 400; }
-  .big span { font-size: 13px; letter-spacing: 0.5px; color: #8A7A62; margin-left: 10px; }
-  .sub { font-size: 14px; color: #4A4237; margin-top: 10px; line-height: 1.6; }
+  .card { padding: 11px 0 10px; border-bottom: 1px solid #DCD1BC; }
+  .lbl { font-size: 10.5px; letter-spacing: 1.5px; color: #8A7A62; text-transform: uppercase; }
+  .big { font-size: 30px; line-height: 1; letter-spacing: -1px; margin-top: 5px; font-weight: 400; }
+  .big span { font-size: 11.5px; letter-spacing: 0; color: #8A7A62; margin-left: 7px; }
+  .sub { font-size: 12.5px; color: #4A4237; margin-top: 6px; line-height: 1.45; }
   .sub b { color: #17130E; font-weight: 700; }
-  .ov { font-size: 13px; color: #6A5E4C; margin-top: 10px;
-        display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-  .trn { margin-top: 10px; padding-top: 10px; border-top: 1px dotted #CFC2A9;
-         font-size: 14px; color: #4A4237; line-height: 1.6; }
+  .ov { font-size: 11.5px; color: #6A5E4C; margin-top: 7px;
+        display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+  .trn { margin-top: 7px; padding-top: 7px; border-top: 1px dotted #CFC2A9;
+         font-size: 12.5px; color: #4A4237; line-height: 1.45; }
   .trn b { color: #17130E; font-weight: 700; }
 
-  /* 추천 카드 — 반전 처리 */
+  /* 추천 카드 — 반전 */
   .card.win {
     background: #17130E; color: #F6F2EA;
-    padding: 20px 18px; margin: 4px 0 10px; border-bottom: none;
+    padding: 12px 12px 11px; margin: 3px 0 7px; border-bottom: none;
   }
   .card.win .lbl { color: #E8B04B; font-weight: 700; }
-  .card.win .big { font-size: 54px; font-weight: 500; }
+  .card.win .big { font-size: 36px; font-weight: 500; }
   .card.win .big span { color: #B8AB93; }
-  .card.win .sub, .card.win .trn { color: #C9BFA9; }
+  .card.win .sub, .card.win .trn, .card.win .ov { color: #C9BFA9; }
   .card.win .sub b, .card.win .trn b { color: #FFF; }
   .card.win .trn { border-top-color: #4A4237; }
   .card.win input { background: #2A241C; color: #F6F2EA; border-color: #4A4237; }
   .card.win button.sm { background: #2A241C; color: #C9BFA9; border-color: #4A4237; }
-  .card.win .ov { color: #B8AB93; }
 
-  .bike { border-left: 4px solid #A8452F; background: #F0E6D4; color: #7C3122;
-          padding: 14px 16px; font-size: 14px; margin-bottom: 10px; line-height: 1.6; }
-  .cfg { margin-top: 24px; font-size: 13px; color: #6A5E4C; line-height: 2.3;
-         border-top: 1px solid #DCD1BC; padding-top: 16px; }
-  .foot { margin-top: 16px; font-size: 11.5px; color: #9A8D77; line-height: 1.8; }
+  .bike { border-left: 3px solid #A8452F; background: #F0E6D4; color: #7C3122;
+          padding: 9px 11px; font-size: 12.5px; margin-bottom: 7px; line-height: 1.45; }
+  .cfg { margin-top: 12px; font-size: 11.5px; color: #6A5E4C; line-height: 1.9;
+         border-top: 1px solid #DCD1BC; padding-top: 9px; }
+  .foot { margin-top: 9px; font-size: 9.5px; color: #9A8D77; line-height: 1.55; }
 </style>
 </head>
 <body>
@@ -86,14 +89,14 @@
 </div>
 <div class="bar">
   <span id="tLabel">야당역 하차</span>
-  <input type="time" lang="en-GB" id="tIn" style="width:112px">
+  <input type="time" lang="en-GB" id="tIn">
   <button class="sm" id="applyBtn">적용</button>
   <button class="sm" id="nowBtn">지금</button>
   <button class="sm" id="geoBtn">위치 갱신</button>
   <span id="nowTxt" style="color:#9A8D77"></span>
 </div>
-<div id="geoRaw" style="font-size:11px;color:#9A8D77;margin-top:4px"></div>
-<div id="cards" style="margin-top:14px"></div>
+<div id="geoRaw" style="font-size:9.5px;color:#9A8D77;margin-top:3px"></div>
+<div id="cards" style="margin-top:9px"></div>
 <div class="cfg" id="cfg"></div>
 <div class="foot">
   084-1·와석초·심야 편은 제외. 버스 소요시간은 실측 기준(야당 7분 / 운정 8분).<br>
@@ -314,14 +317,14 @@ function render() {
           + '<div class="sub">지금부터 '+left+'분 후 · 내 도착 '+fmt(c.ready)
           + ' 기준 <b>대기 '+c.wait+'분</b></div>'
           + '<div class="ov"><span>정류장 도착</span>'
-          + '<input type="time" lang="en-GB" data-ov="'+c.ovKey+'" value="'+(D[c.ovKey]||'')+'" style="width:98px">'
-          + (S[c.ovKey] ? '<button class="sm" data-clr="'+c.ovKey+'" style="padding:2px 7px;font-size:11px">자동</button>'
+          + '<input type="time" lang="en-GB" data-ov="'+c.ovKey+'" value="'+(D[c.ovKey]||'')+'" >'
+          + (S[c.ovKey] ? '<button class="sm" data-clr="'+c.ovKey+'" style="padding:2px 6px;font-size:10.5px">자동</button>'
                         : '<span>('+fmt(c.ready)+' 자동)</span>')
           + '<span>· '+c.dest+' '+fmt(c.arrive)+'</span></div>';
       }
       html += '<div class="trn">플랫폼 '+fmt(c.plat)+' → '+trainHtml(c.tr)+'</div></div>';
     });
-    if (!P.length) html += '<div style="color:#6A5E4C;font-size:13px">버스 운행 종료</div>';
+    if (!P.length) html += '<div style="color:#6A5E4C;font-size:12.5px">버스 운행 종료</div>';
 
   } else {
     // ── 역 → 하우개마을 : 대기시간 최소 ────────────────────────────────
@@ -329,7 +332,7 @@ function render() {
     const bike = P.length > 0 && P.every(p=>p.wait>5);
     if (bike) html += '<div class="bike">양쪽 모두 5분 초과 대기. '
       + '야당역에서 전기자전거를 타십시오.</div>';
-    if (!P.length) html += '<div style="color:#6A5E4C;font-size:14px">해당 시각 이후 운행 없음</div>';
+    if (!P.length) html += '<div style="color:#6A5E4C;font-size:12.5px">해당 시각 이후 운행 없음</div>';
 
     P.forEach(p => {
       const win = !bike && best && p.wait===best.wait;
@@ -340,8 +343,8 @@ function render() {
         + '<div class="sub">지금부터 '+left+'분 후 · 내 도착 '+fmt(p.ready)
         + ' 기준 <b>대기 '+p.wait+'분</b></div>'
         + '<div class="ov"><span>정류장 도착</span>'
-        + '<input type="time" lang="en-GB" data-ov="'+p.ovKey+'" value="'+(D[p.ovKey]||'')+'" style="width:98px">'
-        + (S[p.ovKey] ? '<button class="sm" data-clr="'+p.ovKey+'" style="padding:2px 7px;font-size:11px">자동</button>'
+        + '<input type="time" lang="en-GB" data-ov="'+p.ovKey+'" value="'+(D[p.ovKey]||'')+'" >'
+        + (S[p.ovKey] ? '<button class="sm" data-clr="'+p.ovKey+'" style="padding:2px 6px;font-size:10.5px">자동</button>'
                       : '<span>('+fmt(p.ready)+' 자동)</span>')
         + '<span>· '+p.dest+' '+fmt(p.arrive)+'</span></div></div>';
     });
