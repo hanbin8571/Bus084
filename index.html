@@ -157,7 +157,8 @@ const trainList = (stn,dir,we) => { const t=(TRAIN[stn]||{})[dir]||{};
   return Object.keys(tt).flatMap(h=>tt[h].map(m=>+h*60+m)).sort((a,b)=>a-b); };
 
 // ── 상태 ────────────────────────────────────────────────────────────────
-const S = { mode:'home', dir:'S', t:'', ovYa:'', ovUn:'', ovHau:'',
+const S = { mode: new Date().getHours() < 16 ? 'out' : 'home',
+            dir:'S', t:'', ovYa:'', ovUn:'', ovHau:'',
             walkYa:3, walkUn:3, walkHau:3, train:3 };
 const D = { t:'', ovYa:'', ovUn:'', ovHau:'' };   // 미적용 입력값
 
@@ -274,6 +275,10 @@ document.getElementById('cfg').addEventListener('input', e => {
   const k = e.target.dataset.cfg; if (!k) return;
   S[k] = Number(e.target.value) || 0;
 });
+
+// 시작 시 기본 방향에 맞춰 버튼 상태 반영 (16시 전 = 하우개마을→역)
+[...document.getElementById('modeRow').children].forEach(b =>
+  b.classList.toggle('on', b.dataset.mode === S.mode));
 
 render();
 setInterval(render, 1000);
