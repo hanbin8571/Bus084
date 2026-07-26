@@ -235,7 +235,9 @@ function plans(nowMin, we) {
     if (b) out.push({key:'운정역까지 한 정거장 더', ovKey:'ovUn', board:b.dep, kind:b.kind,
       ready:rUn, wait:b.dep-rUn, arrive:b.dep+RIDE.unToHau[b.kind], dest:'하우개마을'});
   } else {
-    const rH = parseHM(S.ovHau) ?? t0 + S.walkHau;
+    // 상단 칸은 '정류장 도착 시각' 자체 — 도보를 더하지 않는다.
+    // 아무것도 입력하지 않았을 때만 '지금 집에서 나선다'고 보고 도보를 더한다.
+    const rH = parseHM(S.ovHau) ?? parseHM(S.t) ?? nowMin + S.walkHau;
     const a = pick(F_UN, rH, d => RIDE.unToHau[d.kind]);
     const b = pick(F_YA, rH, d => RIDE.yaToHau[d.kind]);
     if (a) { const bd=a.dep+RIDE.unToHau[a.kind];
@@ -291,7 +293,7 @@ function render() {
   if (S.mode === 'out') {
     // ── 하우개마을 → 역 : 버스 2안 + 전기자전거를 열차 시각으로 비교 ──────
     const t0 = P.length ? P[0].ready
-             : (parseHM(S.ovHau) ?? (parseHM(S.t) ?? nowMin) + S.walkHau);
+             : (parseHM(S.ovHau) ?? parseHM(S.t) ?? nowMin + S.walkHau);
     const cand = P.map(p => ({
       ...p, plat: p.arrive + PLATFORM,
       tr: nextTrain(p.stn, p.arrive + PLATFORM, S.dir, we, 0),
@@ -367,7 +369,8 @@ function render() {
     ? '야당역 도보 <input type="number" data-cfg="walkYa" value="'+S.walkYa+'">분 · '
       + '운정역 도보 <input type="number" data-cfg="walkUn" value="'+S.walkUn+'">분 · '
       + '전철 야당↔운정 <input type="number" data-cfg="train" value="'+S.train+'">분'
-    : '하우개마을 도보 <input type="number" data-cfg="walkHau" value="'+S.walkHau+'">분';
+    : '집 → 정류장 도보 <input type="number" data-cfg="walkHau" value="'+S.walkHau+'">분'
+      + ' <span style="opacity:.7">(시각 미입력 시에만 적용)</span>';
   document.getElementById('cfg').innerHTML = cfg;
 }
 
