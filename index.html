@@ -70,6 +70,9 @@
   .card.win input { background: #2A241C; color: #F6F2EA; border-color: #4A4237; }
   .card.win button.sm { background: #2A241C; color: #C9BFA9; border-color: #4A4237; }
 
+  .card.alt { border-left: 3px solid #17130E; padding-left: 10px; }
+  .card.alt .lbl { color: #17130E; font-weight: 700; }
+
   .bike { border-left: 3px solid #A8452F; background: #F0E6D4; color: #7C3122;
           padding: 9px 11px; font-size: 12.5px; margin-bottom: 7px; line-height: 1.45; }
   .cfg { margin-top: 12px; font-size: 11.5px; color: #6A5E4C; line-height: 1.9;
@@ -298,14 +301,22 @@ function render() {
       board:t0, arrive:t0 + BIKE.toStation, plat:bikePlat, wait:0,
       tr: nextTrain('야당역', bikePlat, S.dir, we, 3) });
 
-    // 추천 = 실제로 탈 수 있는 열차가 가장 이른 쪽 (서둘러 편은 제외)
+    // 1순위 = 실제로 탈 수 있는 열차가 가장 이른 쪽 (서둘러 편은 제외)
     const rank = c => (c.tr && c.tr.safe != null) ? c.tr.safe : 1e9;
     const bestT = Math.min(...cand.map(rank));
+    // 보조 추천 = 버스 대기 5분 이하 + 1순위 열차와의 간격 15분 이하
+    const ALT_WAIT = 5, ALT_GAP = 15;
 
     cand.forEach(c => {
       const win = rank(c) === bestT && bestT < 1e9;
-      html += '<div class="card'+(win?' win':'')+'">'
-        + '<div class="lbl">'+c.key+(win?'  ← 열차 최속':'')+'</div>';
+      const lag = rank(c) - bestT;
+      const alt = !win && !c.bike && rank(c) < 1e9
+                  && c.wait <= ALT_WAIT && lag <= ALT_GAP;
+      html += '<div class="card'+(win?' win':'')+(alt?' alt':'')+'">'
+        + '<div class="lbl">'+c.key
+        + (win ? '  ← 열차 최속' : '')
+        + (alt ? '  ← 버스도 무난 (열차 +'+lag+'분)' : '')
+        + '</div>';
       if (c.bike) {
         const bl = Math.max(0, Math.ceil(c.board - nowMin));
         html += '<div class="big">'+fmt(c.board)+'<span>출발 · 대기 없음</span></div>'
