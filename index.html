@@ -71,6 +71,7 @@
   <button class="sm" id="geoBtn">위치 갱신</button>
   <span id="nowTxt" style="color:#5C6866"></span>
 </div>
+<div id="geoRaw" style="font-size:10.5px;color:#4A5553;margin-top:4px"></div>
 <div id="geoAsk" style="display:none;border:1px solid #7FD1B9;background:#141E1B;
      color:#7FD1B9;padding:12px 14px;font-size:12.5px;margin-top:12px;line-height:1.7">
   <div id="geoMsg"></div>
@@ -303,8 +304,9 @@ document.getElementById('cfg').addEventListener('input', e => {
 });
 
 // ── GPS 보조 판정 ────────────────────────────────────────────────────────
-// 하우개마을 정류장 좌표 (Google Places 기준). 실측값으로 교체 권장.
-const HAUGAE = { lat: 37.71048, lng: 126.770195 };
+// 기준점 = 집 (추정). 하우개마을 정류장 좌표에서 정동 130m 이동한 값.
+// 정류장 원좌표: 37.710480, 126.770195 (Google Places)
+const HAUGAE = { lat: 37.710480, lng: 126.771671 };
 const RADIUS = 100; // m
 
 function distM(a, b) {
@@ -322,7 +324,7 @@ function setMode(m) {
   render();
 }
 
-let geoState = 'pending', geoDist = null;
+let geoState = 'pending', geoDist = null, geoPos = null, geoAcc = null;
 const GEO_TXT = {
   pending: ['위치 확인 중', '#5C6866'],
   near:    ['집 근처', '#7FD1B9'],
@@ -334,6 +336,10 @@ function paintGeo() {
   const [txt, col] = GEO_TXT[geoState];
   el.textContent = '· ' + txt + (geoDist != null ? ' (' + Math.round(geoDist) + 'm)' : '');
   el.style.color = col;
+  const raw = document.getElementById('geoRaw');
+  raw.textContent = geoPos
+    ? geoPos.lat.toFixed(6) + ', ' + geoPos.lng.toFixed(6) + '  ±' + Math.round(geoAcc) + 'm'
+    : '';
 }
 
 let geoTimer = null, geoDone = false;
@@ -355,13 +361,15 @@ function locate(first) {
   geoState = 'pending'; geoDist = null; paintGeo();
   navigator.geolocation.getCurrentPosition(
     pos => {
-      geoDist = distM(HAUGAE, { lat: pos.coords.latitude, lng: pos.coords.longitude });
+      geoPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      geoAcc = pos.coords.accuracy;
+      geoDist = distM(HAUGAE, geoPos);
       geoState = geoDist <= RADIUS ? 'near' : 'far';
       paintGeo();
       const target = geoState === 'near' ? 'out' : 'home';
       if (first && !geoDone && target !== S.mode) { geoDone = true; askSwitch(target, geoDist); }
     },
-    () => { geoState = 'fail'; geoDist = null; paintGeo(); },  // 거부·실패 시 시각 기준 유지
+    () => { geoState = 'fail'; geoDist = null; geoPos = null; paintGeo(); },  // 거부·실패 시 시각 기준 유지
     { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
   );
 }
