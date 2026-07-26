@@ -54,7 +54,7 @@
 </style>
 </head>
 <body>
-<div class="hdr">084 · 하우개마을</div>
+<div class="hdr">084 · 하우개마을 <span id="geoState" style="cursor:pointer"></span></div>
 <div class="row" id="modeRow">
   <button data-mode="home" class="on">역 → 하우개마을</button>
   <button data-mode="out">하우개마을 → 역</button>
@@ -68,7 +68,16 @@
   <input type="time" lang="en-GB" id="tIn" style="width:112px">
   <button class="sm" id="applyBtn">적용</button>
   <button class="sm" id="nowBtn">지금</button>
+  <button class="sm" id="geoBtn">위치 갱신</button>
   <span id="nowTxt" style="color:#5C6866"></span>
+</div>
+<div id="geoAsk" style="display:none;border:1px solid #7FD1B9;background:#141E1B;
+     color:#7FD1B9;padding:12px 14px;font-size:12.5px;margin-top:12px;line-height:1.7">
+  <div id="geoMsg"></div>
+  <div style="display:flex;gap:6px;margin-top:9px">
+    <button class="sm" id="geoYes">전환</button>
+    <button class="sm" id="geoNo">유지</button>
+  </div>
 </div>
 <div id="cards" style="margin-top:14px"></div>
 <div class="cfg" id="cfg"></div>
@@ -142,6 +151,7 @@ const RIDE = {
   hauToYa:{base:13,sub:13}, hauToUn:{base:7,sub:15},
 };
 const PLATFORM = 2;
+const BIKE = { toStation: 7, toPlatform: 8 };  // 하우개마을 → 야당역 / → 플랫폼
 
 const flat = t => Object.keys(t).flatMap(h =>
   t[h].filter(([,k]) => k==='base'||k==='sub').map(([m,k]) => ({dep:+h*60+m, kind:k}))
@@ -159,7 +169,7 @@ const trainList = (stn,dir,we) => { const t=(TRAIN[stn]||{})[dir]||{};
 // ── 상태 ────────────────────────────────────────────────────────────────
 const S = { mode: new Date().getHours() < 16 ? 'out' : 'home',
             dir:'S', t:'', ovYa:'', ovUn:'', ovHau:'',
-            walkYa:3, walkUn:3, walkHau:3, train:3 };
+            walkYa:2, walkUn:2, walkHau:3, train:2 };
 const D = { t:'', ovYa:'', ovUn:'', ovHau:'' };   // 미적용 입력값
 
 function plans(nowMin, we) {
@@ -204,8 +214,24 @@ function render() {
   const bike = P.length===2 && P.every(p=>p.wait>5);
 
   let html = '';
-  if (bike) html += '<div class="bike">양쪽 모두 5분 초과 대기. '
-    + (S.mode==='home'?'야당역':'하우개마을') + '에서 전기자전거를 타십시오.</div>';
+  if (bike) {
+    html += '<div class="bike">양쪽 모두 5분 초과 대기. '
+      + (S.mode==='home'?'야당역':'하우개마을') + '에서 전기자전거를 타십시오.';
+    if (S.mode === 'out') {
+      const plat = nowMin + BIKE.toPlatform;          // 지금 출발 기준 플랫폼 도착
+      const tr = trainList('야당역', S.dir, we).filter(x => x >= plat);
+      html += '<div style="margin-top:8px;padding-top:8px;border-top:1px dashed #6A5124">'
+        + '지금 출발 → 야당역 ' + fmt(nowMin + BIKE.toStation)
+        + ' · 플랫폼 ' + fmt(plat) + ' → '
+        + (tr.length
+            ? '<b style="color:#F0C888;font-weight:normal">' + fmt(tr[0]) + ' 열차</b>'
+              + ' (대기 ' + Math.round(tr[0] - plat) + '분)'
+              + (tr[1] ? ', 다음 ' + fmt(tr[1]) : '')
+            : '해당 방면 운행 종료')
+        + '</div>';
+    }
+    html += '</div>';
+  }
 
   if (!P.length) html += '<div style="color:#9EAAA8;font-size:14px">해당 시각 이후 운행 없음</div>';
 
@@ -275,6 +301,73 @@ document.getElementById('cfg').addEventListener('input', e => {
   const k = e.target.dataset.cfg; if (!k) return;
   S[k] = Number(e.target.value) || 0;
 });
+
+// ── GPS 보조 판정 ────────────────────────────────────────────────────────
+// 하우개마을 정류장 좌표 (Google Places 기준). 실측값으로 교체 권장.
+const HAUGAE = { lat: 37.71048, lng: 126.770195 };
+const RADIUS = 100; // m
+
+function distM(a, b) {
+  const R = 6371000, rad = x => x * Math.PI / 180;
+  const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat/2)**2 +
+            Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function setMode(m) {
+  S.mode = m;
+  [...document.getElementById('modeRow').children].forEach(b =>
+    b.classList.toggle('on', b.dataset.mode === m));
+  render();
+}
+
+let geoState = 'pending', geoDist = null;
+const GEO_TXT = {
+  pending: ['위치 확인 중', '#5C6866'],
+  near:    ['집 근처', '#7FD1B9'],
+  far:     ['집 근처 아님', '#9EAAA8'],
+  fail:    ['위치 확인 불가', '#E0A24F'],
+};
+function paintGeo() {
+  const el = document.getElementById('geoState');
+  const [txt, col] = GEO_TXT[geoState];
+  el.textContent = '· ' + txt + (geoDist != null ? ' (' + Math.round(geoDist) + 'm)' : '');
+  el.style.color = col;
+}
+
+let geoTimer = null, geoDone = false;
+function askSwitch(target, dist) {
+  const box = document.getElementById('geoAsk');
+  document.getElementById('geoMsg').textContent =
+    '현재 위치가 하우개마을에서 ' + Math.round(dist) + 'm입니다. '
+    + (target === 'out' ? '하우개마을 → 역' : '역 → 하우개마을')
+    + '으로 전환할까요? (3초 후 자동 전환)';
+  box.style.display = 'block';
+  const close = () => { box.style.display = 'none'; clearTimeout(geoTimer); };
+  document.getElementById('geoYes').onclick = () => { close(); setMode(target); };
+  document.getElementById('geoNo').onclick = close;
+  geoTimer = setTimeout(() => { close(); setMode(target); }, 3000);
+}
+
+function locate(first) {
+  if (!navigator.geolocation) { geoState = 'fail'; paintGeo(); return; }
+  geoState = 'pending'; geoDist = null; paintGeo();
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      geoDist = distM(HAUGAE, { lat: pos.coords.latitude, lng: pos.coords.longitude });
+      geoState = geoDist <= RADIUS ? 'near' : 'far';
+      paintGeo();
+      const target = geoState === 'near' ? 'out' : 'home';
+      if (first && !geoDone && target !== S.mode) { geoDone = true; askSwitch(target, geoDist); }
+    },
+    () => { geoState = 'fail'; geoDist = null; paintGeo(); },  // 거부·실패 시 시각 기준 유지
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+  );
+}
+document.getElementById('geoState').addEventListener('click', () => locate(false));
+document.getElementById('geoBtn').addEventListener('click', () => locate(false));
+locate(true);
 
 // 시작 시 기본 방향에 맞춰 버튼 상태 반영 (16시 전 = 하우개마을→역)
 [...document.getElementById('modeRow').children].forEach(b =>
