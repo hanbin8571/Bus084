@@ -3,54 +3,75 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0F1315">
+<meta name="theme-color" content="#F6F2EA">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="084">
 <title>084 하우개마을</title>
 <style>
   * { box-sizing: border-box; }
   body {
-    margin: 0; background: #0F1315; color: #DDE4E3;
-    font-family: ui-monospace, Menlo, "D2Coding", monospace;
-    padding: 18px 16px calc(44px + env(safe-area-inset-bottom));
+    margin: 0; background: #F6F2EA; color: #17130E;
+    font-family: "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+    padding: 22px 18px calc(46px + env(safe-area-inset-bottom));
     -webkit-text-size-adjust: 100%;
   }
-  .hdr { font-size: 10.5px; letter-spacing: 3px; color: #778482; }
-  .row { display: flex; gap: 6px; margin-top: 12px; }
+  .hdr { font-size: 11.5px; letter-spacing: 3px; color: #8A7A62; text-transform: uppercase; }
+  .row { display: flex; gap: 0; margin-top: 14px; }
   button {
-    flex: 1; padding: 11px 6px; background: transparent; color: #778482;
-    border: 1px solid #293134; border-radius: 2px; font-size: 12.5px;
+    flex: 1; padding: 12px 6px; background: transparent; color: #8A7A62;
+    border: none; border-bottom: 2px solid #DCD1BC; font-size: 14px;
     font-family: inherit; cursor: pointer;
   }
-  button.on { background: #DDE4E3; color: #0F1315; }
-  button.sm { flex: none; padding: 7px 13px; font-size: 12px; }
-  input {
-    background: #1A2023; color: #DDE4E3; border: 1px solid #293134;
-    padding: 5px 7px; font-family: inherit; font-size: 13px; border-radius: 2px;
+  button.on { color: #17130E; border-bottom-color: #17130E; font-weight: 700; }
+  button.sm {
+    flex: none; padding: 7px 13px; font-size: 13px; color: #6A5E4C;
+    border: 1px solid #CFC2A9; border-bottom-width: 1px; border-radius: 2px;
+    background: #FBF8F2;
   }
-  input[type=number] { width: 46px; }
+  input {
+    background: #FBF8F2; color: #17130E; border: 1px solid #CFC2A9;
+    padding: 6px 8px; font-family: inherit; font-size: 14px; border-radius: 2px;
+  }
+  input[type=number] { width: 50px; }
   .bar {
-    margin-top: 12px; font-size: 12px; color: #778482;
+    margin-top: 16px; font-size: 13px; color: #6A5E4C;
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   }
-  .card { border: 1px solid #293134; background: #141A1D; padding: 14px; margin-bottom: 8px; }
-  .card.win { border-color: #7FD1B9; background: #141E1B; }
-  .lbl { font-size: 11px; color: #778482; letter-spacing: 1px; }
-  .card.win .lbl { color: #7FD1B9; }
-  .big { font-size: 32px; margin-top: 4px; letter-spacing: -0.5px; }
-  .big span { font-size: 13px; color: #9EAAA8; margin-left: 8px; }
-  .sub { font-size: 13px; color: #9EAAA8; margin-top: 4px; }
-  .sub b { color: #DDE4E3; font-weight: normal; }
-  .ov { font-size: 12px; color: #9EAAA8; margin-top: 7px;
-        display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
-  .trn { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #293134;
-         font-size: 12.5px; color: #9EAAA8; }
-  .trn b { color: #DDE4E3; font-weight: normal; }
-  .bike { border: 1px solid #E0A24F; background: #1E1809; color: #E0A24F;
-          padding: 13px 14px; font-size: 13px; margin-bottom: 8px; }
-  .cfg { margin-top: 20px; font-size: 11.5px; color: #778482; line-height: 2.1; }
-  .foot { margin-top: 14px; font-size: 10.5px; color: #4A5553; line-height: 1.7; }
+
+  /* 카드 */
+  .card { padding: 20px 0 18px; border-bottom: 1px solid #DCD1BC; }
+  .lbl { font-size: 12px; letter-spacing: 2px; color: #8A7A62; text-transform: uppercase; }
+  .big { font-size: 46px; line-height: 1; letter-spacing: -1.5px; margin-top: 8px; font-weight: 400; }
+  .big span { font-size: 13px; letter-spacing: 0.5px; color: #8A7A62; margin-left: 10px; }
+  .sub { font-size: 14px; color: #4A4237; margin-top: 10px; line-height: 1.6; }
+  .sub b { color: #17130E; font-weight: 700; }
+  .ov { font-size: 13px; color: #6A5E4C; margin-top: 10px;
+        display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+  .trn { margin-top: 10px; padding-top: 10px; border-top: 1px dotted #CFC2A9;
+         font-size: 14px; color: #4A4237; line-height: 1.6; }
+  .trn b { color: #17130E; font-weight: 700; }
+
+  /* 추천 카드 — 반전 처리 */
+  .card.win {
+    background: #17130E; color: #F6F2EA;
+    padding: 20px 18px; margin: 4px 0 10px; border-bottom: none;
+  }
+  .card.win .lbl { color: #E8B04B; font-weight: 700; }
+  .card.win .big { font-size: 54px; font-weight: 500; }
+  .card.win .big span { color: #B8AB93; }
+  .card.win .sub, .card.win .trn { color: #C9BFA9; }
+  .card.win .sub b, .card.win .trn b { color: #FFF; }
+  .card.win .trn { border-top-color: #4A4237; }
+  .card.win input { background: #2A241C; color: #F6F2EA; border-color: #4A4237; }
+  .card.win button.sm { background: #2A241C; color: #C9BFA9; border-color: #4A4237; }
+  .card.win .ov { color: #B8AB93; }
+
+  .bike { border-left: 4px solid #A8452F; background: #F0E6D4; color: #7C3122;
+          padding: 14px 16px; font-size: 14px; margin-bottom: 10px; line-height: 1.6; }
+  .cfg { margin-top: 24px; font-size: 13px; color: #6A5E4C; line-height: 2.3;
+         border-top: 1px solid #DCD1BC; padding-top: 16px; }
+  .foot { margin-top: 16px; font-size: 11.5px; color: #9A8D77; line-height: 1.8; }
 </style>
 </head>
 <body>
@@ -69,22 +90,14 @@
   <button class="sm" id="applyBtn">적용</button>
   <button class="sm" id="nowBtn">지금</button>
   <button class="sm" id="geoBtn">위치 갱신</button>
-  <span id="nowTxt" style="color:#5C6866"></span>
+  <span id="nowTxt" style="color:#9A8D77"></span>
 </div>
-<div id="geoRaw" style="font-size:10.5px;color:#4A5553;margin-top:4px"></div>
-<div id="geoAsk" style="display:none;border:1px solid #7FD1B9;background:#141E1B;
-     color:#7FD1B9;padding:12px 14px;font-size:12.5px;margin-top:12px;line-height:1.7">
-  <div id="geoMsg"></div>
-  <div style="display:flex;gap:6px;margin-top:9px">
-    <button class="sm" id="geoYes">전환</button>
-    <button class="sm" id="geoNo">유지</button>
-  </div>
-</div>
+<div id="geoRaw" style="font-size:11px;color:#9A8D77;margin-top:4px"></div>
 <div id="cards" style="margin-top:14px"></div>
 <div class="cfg" id="cfg"></div>
 <div class="foot">
-  와석초·심야 편은 하우개마을 미경유로 제외. 승하차 소요는 정류장 수 기준 추정값.<br>
-  열차 시간표는 2025.5.1 시행 플랫폼 게시본이며 급행 구분은 반영되지 않았습니다.
+  084-1·와석초·심야 편은 제외. 버스 소요시간은 실측 기준(야당 7분 / 운정 8분).<br>
+  열차 시간표는 2025.5.1 시행 플랫폼 게시본이며 급행 구분은 반영되지 않았습니다.<br>공휴일 목록은 2027년까지 수록. 이후에는 코드의 HOLIDAYS를 갱신하십시오.
 </div>
 
 <script>
@@ -147,15 +160,18 @@ const TRAIN = {
      we:{5:[34,54],6:[12,27,44,52],7:[0,9,33,46,58],8:[9,18,26,40,51],9:[5,16,28,43,57],10:[9,19,29,41,54],11:[14,29,42,56],12:[11,26,40,58],13:[11,31,44,59],14:[11,29,36,52],15:[10,33,44],16:[0,14,29,42,57],17:[11,24,36,44],18:[1,20,27,45,54],19:[23,36,51],20:[2,17,33,41],21:[1,10,32,51],22:[11,24,36,48],23:[6,31]}}},
 };
 
+// 084 단일 편성 기준 (사용자 실측). 084-1은 우회가 커서 선택지에서 제외.
 const RIDE = {
-  yaToHau:{base:7,sub:15}, unToHau:{base:13,sub:13},
-  hauToYa:{base:13,sub:13}, hauToUn:{base:7,sub:15},
+  yaToHau:{base:7},   // 야당역 출발 → 하우개마을
+  unToHau:{base:8},   // 운정역 출발 → 하우개마을
+  hauToYa:{base:7},   // 하우개마을 승차(운정역발) → 야당역
+  hauToUn:{base:8},   // 하우개마을 승차(야당역발) → 운정역
 };
 const PLATFORM = 2;
 const BIKE = { toStation: 7, toPlatform: 8 };  // 하우개마을 → 야당역 / → 플랫폼
 
 const flat = t => Object.keys(t).flatMap(h =>
-  t[h].filter(([,k]) => k==='base'||k==='sub').map(([m,k]) => ({dep:+h*60+m, kind:k}))
+  t[h].filter(([,k]) => k==='base').map(([m,k]) => ({dep:+h*60+m, kind:k}))
 ).sort((a,b)=>a.dep-b.dep);
 const F_UN = flat(UNJEONG), F_YA = flat(YADANG);
 
@@ -167,11 +183,38 @@ const trainList = (stn,dir,we) => { const t=(TRAIN[stn]||{})[dir]||{};
   const tt=t[we?'we':'wd']||{};
   return Object.keys(tt).flatMap(h=>tt[h].map(m=>+h*60+m)).sort((a,b)=>a-b); };
 
+// 공휴일은 열차 주말 시간표를 적용. 음력 명절은 매년 갱신 필요.
+const HOLIDAYS = new Set([
+  '2026-08-17',                              // 광복절 대체
+  '2026-09-24','2026-09-25','2026-09-28',    // 추석 연휴 (28일 대체 여부 미확정)
+  '2026-10-05','2026-10-09',                 // 개천절 대체 / 한글날
+  '2026-12-25',
+  '2027-01-01','2027-03-01','2027-05-05','2027-06-07',
+  '2027-08-15','2027-10-03','2027-10-09','2027-12-25',
+]);
+const isWeekendLike = d => {
+  const day = d.getDay();
+  if (day === 0 || day === 6) return true;
+  const k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0')
+          + '-' + String(d.getDate()).padStart(2,'0');
+  return HOLIDAYS.has(k);
+};
+
 // ── 상태 ────────────────────────────────────────────────────────────────
-const S = { mode: new Date().getHours() < 16 ? 'out' : 'home',
+const S = { mode: 'home',
             dir:'S', t:'', ovYa:'', ovUn:'', ovHau:'',
             walkYa:2, walkUn:2, walkHau:3, train:2 };
 const D = { t:'', ovYa:'', ovUn:'', ovHau:'' };   // 미적용 입력값
+
+// 00:00~03:00 사이에는 전날 24시대 편성도 유효하다
+const pick = (list, r, off) => {
+  const key = d => d.dep + (off ? off(d) : 0);
+  if (r < 180) {
+    const late = list.find(d => key(d) >= r + 1440);
+    if (late) return { ...late, dep: late.dep - 1440 };
+  }
+  return list.find(d => key(d) >= r) || null;
+};
 
 function plans(nowMin, we) {
   const t0 = parseHM(S.t) ?? nowMin;
@@ -179,16 +222,16 @@ function plans(nowMin, we) {
   if (S.mode === 'home') {
     const rYa = parseHM(S.ovYa) ?? t0 + S.walkYa;
     const rUn = parseHM(S.ovUn) ?? t0 + S.train + S.walkUn;
-    const a = F_YA.find(d => d.dep >= rYa);
-    const b = F_UN.find(d => d.dep >= rUn);
+    const a = pick(F_YA, rYa);
+    const b = pick(F_UN, rUn);
     if (a) out.push({key:'야당역에서 하차', ovKey:'ovYa', board:a.dep, kind:a.kind,
       ready:rYa, wait:a.dep-rYa, arrive:a.dep+RIDE.yaToHau[a.kind], dest:'하우개마을'});
     if (b) out.push({key:'운정역까지 한 정거장 더', ovKey:'ovUn', board:b.dep, kind:b.kind,
       ready:rUn, wait:b.dep-rUn, arrive:b.dep+RIDE.unToHau[b.kind], dest:'하우개마을'});
   } else {
     const rH = parseHM(S.ovHau) ?? t0 + S.walkHau;
-    const a = F_UN.find(d => d.dep+RIDE.unToHau[d.kind] >= rH);
-    const b = F_YA.find(d => d.dep+RIDE.yaToHau[d.kind] >= rH);
+    const a = pick(F_UN, rH, d => RIDE.unToHau[d.kind]);
+    const b = pick(F_YA, rH, d => RIDE.yaToHau[d.kind]);
     if (a) { const bd=a.dep+RIDE.unToHau[a.kind];
       out.push({key:'야당역 방면', ovKey:'ovHau', stn:'야당역', board:bd, kind:a.kind,
         ready:rH, wait:bd-rH, arrive:bd+RIDE.hauToYa[a.kind], dest:'야당역'}); }
@@ -200,10 +243,36 @@ function plans(nowMin, we) {
   return out;
 }
 
+function nextTrain(stn, plat, dir, we, tol) {
+  let all = trainList(stn, dir, we);
+  // 00:00~03:00 : 전날 24시대 열차를 당일 새벽으로 환산
+  if (plat < 180) all = all.map(x => x >= 1440 ? x - 1440 : x).sort((a,b)=>a-b);
+  const list = all.filter(x => x >= plat - (tol || 0));
+  if (!list.length) return null;
+  const safe = list.find(x => x >= plat);
+  return { first: list[0], gap: Math.round(list[0] - plat), safe: safe ?? null,
+           after: list.find(x => x > list[0]) ?? null };
+}
+
+function trainHtml(tr) {
+  if (!tr) return '해당 방면 운행 종료';
+  const rush = tr.gap < 0;
+  return (rush
+      ? '<b style="color:#C4452E">' + fmt(tr.first) + ' 열차 (서둘러 ' + tr.gap + '분)</b>'
+      : '<b>' + fmt(tr.first) + ' 열차</b> (대기 ' + tr.gap + '분)')
+    + (tr.after ? ', 다음 ' + fmt(tr.after) : '');
+}
+
 function render() {
+  // 입력란에 포커스가 있는 동안에는 DOM을 갈아치우지 않는다 (값·커서 유실 방지)
+  const ae = document.activeElement;
+  if (ae && ae.tagName === 'INPUT'
+      && (document.getElementById('cards').contains(ae)
+       || document.getElementById('cfg').contains(ae))) return;
+
   const now = new Date();
   const nowMin = (now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds())/60;
-  const we = now.getDay()===0 || now.getDay()===6;
+  const we = isWeekendLike(now);
 
   document.getElementById('tLabel').textContent =
     S.mode==='home' ? '야당역 하차' : '정류장 도착';
@@ -211,55 +280,73 @@ function render() {
   document.getElementById('nowTxt').textContent = S.t ? '' : '현재 '+fmt(nowMin)+' 기준';
 
   const P = plans(nowMin, we);
-  const best = P.length ? P.reduce((x,y)=> y.wait<x.wait?y:x) : null;
-  const bike = P.length===2 && P.every(p=>p.wait>5);
-
   let html = '';
-  if (bike) {
-    html += '<div class="bike">양쪽 모두 5분 초과 대기. '
-      + (S.mode==='home'?'야당역':'하우개마을') + '에서 전기자전거를 타십시오.';
-    if (S.mode === 'out') {
-      const plat = nowMin + BIKE.toPlatform;          // 지금 출발 기준 플랫폼 도착
-      const tr = trainList('야당역', S.dir, we).filter(x => x >= plat);
-      html += '<div style="margin-top:8px;padding-top:8px;border-top:1px dashed #6A5124">'
-        + '지금 출발 → 야당역 ' + fmt(nowMin + BIKE.toStation)
-        + ' · 플랫폼 ' + fmt(plat) + ' → '
-        + (tr.length
-            ? '<b style="color:#F0C888;font-weight:normal">' + fmt(tr[0]) + ' 열차</b>'
-              + ' (대기 ' + Math.round(tr[0] - plat) + '분)'
-              + (tr[1] ? ', 다음 ' + fmt(tr[1]) : '')
-            : '해당 방면 운행 종료')
-        + '</div>';
-    }
-    html += '</div>';
+
+  if (S.mode === 'out') {
+    // ── 하우개마을 → 역 : 버스 2안 + 전기자전거를 열차 시각으로 비교 ──────
+    const t0 = P.length ? P[0].ready
+             : (parseHM(S.ovHau) ?? (parseHM(S.t) ?? nowMin) + S.walkHau);
+    const cand = P.map(p => ({
+      ...p, plat: p.arrive + PLATFORM,
+      tr: nextTrain(p.stn, p.arrive + PLATFORM, S.dir, we, 0),
+    }));
+    const bikePlat = t0 + BIKE.toPlatform;
+    cand.push({ bike:true, key:'전기자전거', stn:'야당역', ready:t0,
+      board:t0, arrive:t0 + BIKE.toStation, plat:bikePlat, wait:0,
+      tr: nextTrain('야당역', bikePlat, S.dir, we, 3) });
+
+    // 추천 = 실제로 탈 수 있는 열차가 가장 이른 쪽 (서둘러 편은 제외)
+    const rank = c => (c.tr && c.tr.safe != null) ? c.tr.safe : 1e9;
+    const bestT = Math.min(...cand.map(rank));
+
+    cand.forEach(c => {
+      const win = rank(c) === bestT && bestT < 1e9;
+      html += '<div class="card'+(win?' win':'')+'">'
+        + '<div class="lbl">'+c.key+(win?'  ← 열차 최속':'')+'</div>';
+      if (c.bike) {
+        const bl = Math.max(0, Math.ceil(c.board - nowMin));
+        html += '<div class="big">'+fmt(c.board)+'<span>출발 · 대기 없음</span></div>'
+          + '<div class="sub">지금부터 '+bl+'분 후 · 내 도착 '+fmt(c.ready)
+          + ' 기준 · 야당역 '+fmt(c.arrive)+'</div>';
+      } else {
+        const left = Math.max(0, Math.ceil(c.board - nowMin));
+        html += '<div class="big">'+fmt(c.board)+'<span>'+(c.kind==='sub'?'084-1':'084')+' 출발</span></div>'
+          + '<div class="sub">지금부터 '+left+'분 후 · 내 도착 '+fmt(c.ready)
+          + ' 기준 <b>대기 '+c.wait+'분</b></div>'
+          + '<div class="ov"><span>정류장 도착</span>'
+          + '<input type="time" lang="en-GB" data-ov="'+c.ovKey+'" value="'+(D[c.ovKey]||'')+'" style="width:98px">'
+          + (S[c.ovKey] ? '<button class="sm" data-clr="'+c.ovKey+'" style="padding:2px 7px;font-size:11px">자동</button>'
+                        : '<span>('+fmt(c.ready)+' 자동)</span>')
+          + '<span>· '+c.dest+' '+fmt(c.arrive)+'</span></div>';
+      }
+      html += '<div class="trn">플랫폼 '+fmt(c.plat)+' → '+trainHtml(c.tr)+'</div></div>';
+    });
+    if (!P.length) html += '<div style="color:#6A5E4C;font-size:13px">버스 운행 종료</div>';
+
+  } else {
+    // ── 역 → 하우개마을 : 대기시간 최소 ────────────────────────────────
+    const best = P.length ? P.reduce((x,y)=> y.wait<x.wait?y:x) : null;
+    const bike = P.length > 0 && P.every(p=>p.wait>5);
+    if (bike) html += '<div class="bike">양쪽 모두 5분 초과 대기. '
+      + '야당역에서 전기자전거를 타십시오.</div>';
+    if (!P.length) html += '<div style="color:#6A5E4C;font-size:14px">해당 시각 이후 운행 없음</div>';
+
+    P.forEach(p => {
+      const win = !bike && best && p.wait===best.wait;
+      const left = Math.max(0, Math.ceil(p.board - nowMin));
+      html += '<div class="card'+(win?' win':'')+'">'
+        + '<div class="lbl">'+p.key+(win?'  ← 대기 최소':'')+'</div>'
+        + '<div class="big">'+fmt(p.board)+'<span>'+(p.kind==='sub'?'084-1':'084')+' 출발</span></div>'
+        + '<div class="sub">지금부터 '+left+'분 후 · 내 도착 '+fmt(p.ready)
+        + ' 기준 <b>대기 '+p.wait+'분</b></div>'
+        + '<div class="ov"><span>정류장 도착</span>'
+        + '<input type="time" lang="en-GB" data-ov="'+p.ovKey+'" value="'+(D[p.ovKey]||'')+'" style="width:98px">'
+        + (S[p.ovKey] ? '<button class="sm" data-clr="'+p.ovKey+'" style="padding:2px 7px;font-size:11px">자동</button>'
+                      : '<span>('+fmt(p.ready)+' 자동)</span>')
+        + '<span>· '+p.dest+' '+fmt(p.arrive)+'</span></div></div>';
+    });
   }
 
-  if (!P.length) html += '<div style="color:#9EAAA8;font-size:14px">해당 시각 이후 운행 없음</div>';
-
-  P.forEach(p => {
-    const win = !bike && best && p.wait===best.wait;
-    const left = Math.max(0, Math.ceil(p.board - nowMin));
-    html += '<div class="card'+(win?' win':'')+'">'
-      + '<div class="lbl">'+p.key+(win?'  ← 대기 최소':'')+'</div>'
-      + '<div class="big">'+fmt(p.board)+'<span>'+(p.kind==='sub'?'084-1':'084')+' 출발</span></div>'
-      + '<div class="sub">지금부터 '+left+'분 후 · 내 도착 '+fmt(p.ready)
-      + ' 기준 <b>대기 '+p.wait+'분</b></div>'
-      + '<div class="ov"><span>정류장 도착</span>'
-      + '<input type="time" lang="en-GB" data-ov="'+p.ovKey+'" value="'+(D[p.ovKey]||'')+'" style="width:98px">'
-      + (S[p.ovKey] ? '<button class="sm" data-clr="'+p.ovKey+'" style="padding:2px 7px;font-size:11px">자동</button>'
-                    : '<span>('+fmt(p.ready)+' 자동)</span>')
-      + '<span>· '+p.dest+' '+fmt(p.arrive)+'</span></div>';
-    if (S.mode==='out') {
-      const plat = p.arrive + PLATFORM;
-      const tr = trainList(p.stn, S.dir, we).filter(x => x >= plat);
-      html += '<div class="trn">플랫폼 '+fmt(plat)+' → '
-        + (tr.length ? '<b>'+fmt(tr[0])+' 열차</b> (환승 대기 '+Math.round(tr[0]-plat)+'분)'
-            + (tr[1] ? ', 다음 '+fmt(tr[1]) : '')
-          : '해당 방면 운행 종료')
-        + '</div>';
-    }
-    html += '</div>';
-  });
   document.getElementById('cards').innerHTML = html;
 
   const cfg = S.mode==='home'
@@ -269,39 +356,6 @@ function render() {
     : '하우개마을 도보 <input type="number" data-cfg="walkHau" value="'+S.walkHau+'">분';
   document.getElementById('cfg').innerHTML = cfg;
 }
-
-// ── 이벤트 ──────────────────────────────────────────────────────────────
-document.getElementById('modeRow').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  S.mode = b.dataset.mode;
-  [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x===b));
-  render();
-});
-document.getElementById('dirRow').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  S.dir = b.dataset.dir;
-  [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x===b));
-  render();
-});
-document.getElementById('tIn').addEventListener('input', e => { D.t = e.target.value; });
-document.getElementById('applyBtn').addEventListener('click', () => {
-  S.t = D.t; S.ovYa = D.ovYa; S.ovUn = D.ovUn; S.ovHau = D.ovHau; render();
-});
-document.getElementById('nowBtn').addEventListener('click', () => {
-  S.t=S.ovYa=S.ovUn=S.ovHau=''; D.t=D.ovYa=D.ovUn=D.ovHau='';
-  document.getElementById('tIn').value=''; render();
-});
-document.getElementById('cards').addEventListener('input', e => {
-  if (e.target.dataset.ov) D[e.target.dataset.ov] = e.target.value;
-});
-document.getElementById('cards').addEventListener('click', e => {
-  const b = e.target.closest('[data-clr]'); if (!b) return;
-  S[b.dataset.clr] = ''; D[b.dataset.clr] = ''; render();
-});
-document.getElementById('cfg').addEventListener('input', e => {
-  const k = e.target.dataset.cfg; if (!k) return;
-  S[k] = Number(e.target.value) || 0;
-});
 
 // ── GPS 보조 판정 ────────────────────────────────────────────────────────
 // 기준점 = 집. 폰 재측정 / PC / 최소제곱 추정값 세 좌표의 중심.
@@ -326,10 +380,10 @@ function setMode(m) {
 
 let geoState = 'pending', geoDist = null, geoPos = null, geoAcc = null;
 const GEO_TXT = {
-  pending: ['위치 확인 중', '#5C6866'],
-  near:    ['집 근처', '#7FD1B9'],
-  far:     ['집 근처 아님', '#9EAAA8'],
-  fail:    ['위치 확인 불가', '#E0A24F'],
+  pending: ['위치 확인 중', '#9A8D77'],
+  near:    ['집 근처', '#3F7A5E'],
+  far:     ['집 근처 아님', '#8A7A62'],
+  fail:    ['위치 확인 불가', '#A8452F'],
 };
 function paintGeo() {
   const el = document.getElementById('geoState');
@@ -342,19 +396,7 @@ function paintGeo() {
     : '';
 }
 
-let geoTimer = null, geoDone = false;
-function askSwitch(target, dist) {
-  const box = document.getElementById('geoAsk');
-  document.getElementById('geoMsg').textContent =
-    '현재 위치가 하우개마을에서 ' + Math.round(dist) + 'm입니다. '
-    + (target === 'out' ? '하우개마을 → 역' : '역 → 하우개마을')
-    + '으로 전환할까요? (3초 후 자동 전환)';
-  box.style.display = 'block';
-  const close = () => { box.style.display = 'none'; clearTimeout(geoTimer); };
-  document.getElementById('geoYes').onclick = () => { close(); setMode(target); };
-  document.getElementById('geoNo').onclick = close;
-  geoTimer = setTimeout(() => { close(); setMode(target); }, 3000);
-}
+let geoDone = false;
 
 function locate(first) {
   if (!navigator.geolocation) { geoState = 'fail'; paintGeo(); return; }
@@ -367,17 +409,53 @@ function locate(first) {
       geoState = geoDist <= RADIUS ? 'near' : 'far';
       paintGeo();
       const target = geoState === 'near' ? 'out' : 'home';
-      if (first && !geoDone && target !== S.mode) { geoDone = true; askSwitch(target, geoDist); }
+      if (first && !geoDone) { geoDone = true; if (target !== S.mode) setMode(target); }
     },
     () => { geoState = 'fail'; geoDist = null; geoPos = null; paintGeo(); },  // 거부·실패 시 시각 기준 유지
     { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
   );
 }
+// ── UI 이벤트 ───────────────────────────────────────────────────────────
+document.getElementById('modeRow').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  S.mode = b.dataset.mode;
+  [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x === b));
+  render();
+});
+document.getElementById('dirRow').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  S.dir = b.dataset.dir;
+  [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x === b));
+  render();
+});
+document.getElementById('tIn').addEventListener('input', e => { D.t = e.target.value; });
+document.getElementById('applyBtn').addEventListener('click', () => {
+  S.t = D.t; S.ovYa = D.ovYa; S.ovUn = D.ovUn; S.ovHau = D.ovHau; render();
+});
+document.getElementById('nowBtn').addEventListener('click', () => {
+  S.t = S.ovYa = S.ovUn = S.ovHau = '';
+  D.t = D.ovYa = D.ovUn = D.ovHau = '';
+  document.getElementById('tIn').value = ''; render();
+});
+document.getElementById('cards').addEventListener('input', e => {
+  if (e.target.dataset.ov) D[e.target.dataset.ov] = e.target.value;
+});
+document.getElementById('cards').addEventListener('click', e => {
+  const b = e.target.closest('[data-clr]'); if (!b) return;
+  S[b.dataset.clr] = ''; D[b.dataset.clr] = ''; render();
+});
+document.getElementById('cfg').addEventListener('input', e => {
+  const k = e.target.dataset.cfg; if (!k) return;
+  S[k] = Number(e.target.value) || 0;
+  document.getElementById('cards').innerHTML = '';   // 다음 초에 재계산
+});
+document.getElementById('cfg').addEventListener('change', () => render());
+
 document.getElementById('geoState').addEventListener('click', () => locate(false));
 document.getElementById('geoBtn').addEventListener('click', () => locate(false));
 locate(true);
 
-// 시작 시 기본 방향에 맞춰 버튼 상태 반영 (16시 전 = 하우개마을→역)
+// 시작 시 기본 방향(역→하우개마을) 버튼 상태 반영. GPS 확인되면 즉시 교체.
 [...document.getElementById('modeRow').children].forEach(b =>
   b.classList.toggle('on', b.dataset.mode === S.mode));
 
