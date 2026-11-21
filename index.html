@@ -717,8 +717,9 @@ function setMode(m) {
   render(); rtPoll();
 }
 
-let geoState = 'pending', geoDist = null, geoPos = null, geoAcc = null;
+let geoState = 'idle', geoDist = null, geoPos = null, geoAcc = null;
 const GEO_TXT = {
+  idle:    ['위치 미확인', '#9A8D77'],
   pending: ['위치 확인 중', '#9A8D77'],
   near:    ['집 근처', '#3F7A5E'],
   far:     ['집 근처 아님', '#8A7A62'],
@@ -801,7 +802,9 @@ document.getElementById('cfg').addEventListener('change', () => render());
 
 document.getElementById('geoState').addEventListener('click', () => locate(false));
 document.getElementById('geoBtn').addEventListener('click', () => locate(false));
-locate(true);
+// 시작할 때는 위치를 요청하지 않는다(iOS 권한 확인창이 매번 뜨는 것을 피함).
+// 위치는 '위치 갱신'이나 상태 글자를 눌렀을 때만 확인하고, 화면 자동 전환은 하지 않는다.
+paintGeo();
 
 // 시작 시 기본 방향(역→하우개마을) 버튼 상태 반영. GPS 확인되면 즉시 교체.
 [...document.getElementById('modeRow').children].forEach(b =>
