@@ -21,8 +21,8 @@
 과거에 함수 통째 교체 중 UI 이벤트 핸들러가 전부 삭제된 사고가 있었다(구문 검사는 통과).
 
 1. `<script>` 구문 검사
-2. DOM id ↔ `getElementById` 참조 짝 확인: `modeRow dirRow tIn applyBtn nowBtn geoBtn geoState geoRaw nowTxt tLabel cards cfg keyIn keySave keyDel keyState`
-3. 이벤트 핸들러 존재 확인 (`applyBtn`, `nowBtn`, `modeRow`, `dirRow`, `cards` input/click, `cfg`, `keySave`, `keyDel`)
+2. DOM id ↔ `getElementById` 참조 짝 확인: `modeRow retRow dirRow tIn applyBtn nowBtn geoBtn geoState geoRaw nowTxt tLabel cards cfg keyIn keySave keyDel keyState`
+3. 이벤트 핸들러 존재 확인 (`applyBtn`, `nowBtn`, `modeRow`, `retRow`, `dirRow`, `cards` input/click, `cfg`, `keySave`, `keyDel`)
 4. 규칙 점검은 목록 대조가 아니라 코드를 실제로 읽어서 한다
 
 ## 경로와 데이터
@@ -99,6 +99,16 @@
 - 아래 정보 카드 3장: 084 계열(실시간 + 시간표 다음 5편, 직행 편 굵게) / 082(운정가구공단) / G7426(한빛마을4.8단지, 빈자리)
 - 소요시간은 **추정 기본값**(실측 아님): 하우개마을→한빛마을4.8단지 5분, →운정가구공단 4분, 082 한 정류소 2분, 전기자전거 7분. 화면 아래에서 수정하면 localStorage(`bus084.gn`)에 저장
 
+**G7426으로 귀가** (역→하우개마을 화면의 `retRow` 전환, `S.ret` = `rail` 기본 / `bus`, 함수 `retHtml`)
+- 기본값은 경의중앙선(기존 화면). 앱을 다시 열면 항상 경의중앙선으로 돌아온다
+- 상단 시각 = 한빛마을4.8단지(31624) 하차 시각. 미입력 시 현재
+- A안 내린 자리에서 084-1·와석초 / B안 운정가구공단(31453)까지 걸어가 084 계열 아무거나 (084 계열 전부 정차)
+- 추천: 하우개마을 도착이 이른 쪽. 같으면 A안
+- 승차 시각은 실시간 우선, 없으면 "야당역 출발" 표 + 추정 소요(`시간표 추정` 표시)
+- 추정 기본값: 084-1 야당역 출발→한빛마을 7분, 와석초 1분, 도보 한빛마을→운정가구공단 5분. **도보 가능 여부·거리는 미확인**
+- 귀가 방면 G7426은 야당역.한빛마을5.9단지 30174에 서고, 084(하우개마을 방면)는 길 건너 30173에 선다 → 그 조합은 후보에 넣지 않음
+- 입력 시각이 지금과 30분 넘게 차이 나면 실시간은 판단에 쓰지 않는다(강남 화면도 동일)
+
 **실시간 도착**
 - 인증키는 화면 아래 입력란에서 저장 → 이 기기 localStorage(`bus084.gbisKey`)에만 둔다. **저장소·커밋에 키를 넣지 않는다.**
 - 키가 있을 때만 30초 주기 조회(화면이 보일 때만). 역 연결 화면 2개에서는 카드에 한 줄 표시만 하고 순위에 반영하지 않는다. 강남 화면에서는 순위 계산에 쓴다.
@@ -144,6 +154,7 @@
 - 응답: `response.msgBody.busArrivalList[]` — `routeName`, `predictTime1/2`(분), `predictTimeSec1/2`, `locationNo1/2`(몇 정류소 전), `remainSeatCnt1/2`. 예정 없으면 빈 문자열. `resultCode` 0 정상 / 4 결과 없음.
 - 노선: `busrouteservice/v2/getBusRouteInfoItemv2`(배차·첫차·막차), `getBusRouteStationListv2`(경유 정류소)
 - 응답에 `Access-Control-Allow-Origin`이 요청 Origin 그대로 옴 → 브라우저 직접 호출 가능, 프록시 불필요.
+- stationId(귀가 방면): 한빛마을4.8단지 229001505(31624) / 운정가구공단 229002605(31453)
 - stationId: 하우개마을 229000976(30881, 야당·와석초 방면)·229002511(30120, 운정 방면) / 한빛마을4.8단지 229001506(31623, 강남 방면) / 운정가구공단 229002604(31452) / 야당역.한빛마을5.9단지 229000968(30173) / 야당역 229002806 / 운정역 229002362
 - 공개 파일(키 불필요): `https://www.gbis.go.kr/service/adm/banner/download.action?cmd=download&fName=GGD_RouteInfo_M.xlsx`, `GGD_RouteStationInfo_M.xlsx`
 - 나무위키는 Cloudflare 봇 차단으로 자동 접속 불가.

@@ -90,6 +90,10 @@
   <button data-mode="out">하우개마을 → 역</button>
   <button data-mode="gn">강남 G7426</button>
 </div>
+<div class="row" id="retRow">
+  <button data-ret="rail" class="on">경의중앙선으로 귀가</button>
+  <button data-ret="bus">G7426으로 귀가</button>
+</div>
 <div class="row" id="dirRow" style="display:none">
   <button data-dir="S" class="on">서울·용문 방면</button>
   <button data-dir="M">문산 방면</button>
@@ -227,15 +231,19 @@ const isWeekendLike = d => {
 };
 
 // ── 상태 ────────────────────────────────────────────────────────────────
-const S = { mode: 'home',
+const S = { mode: 'home', ret: 'rail',   // ret: 귀가 수단. 기본 경의중앙선
             dir:'S', t:'', ovYa:'', ovUn:'', ovHau:'',
             walkYa:2, walkUn:2, walkHau:3, train:2,
             // 강남 화면용 소요시간(분). 실측 전 추정 기본값 — 기기에 저장된 값이 있으면 그것을 쓴다.
             rideHan:5,    // 하우개마을 → 한빛마을4.8단지 (084-1·와석초)
             rideGagu:4,   // 하우개마을 → 운정가구공단 (084)
             ride82:2,     // 운정가구공단 → 한빛마을4.8단지 (082, 한 정류소)
-            bikeHan:7 };  // 전기자전거 → 한빛마을4.8단지
-const GN_KEYS = ['rideHan','rideGagu','ride82','bikeHan'], LS_GN = 'bus084.gn';
+            bikeHan:7,    // 전기자전거 → 한빛마을4.8단지
+            // G7426 귀가용 (추정 기본값)
+            retSub:7,     // 084-1: 야당역 출발 → 한빛마을4.8단지(귀가 방면)
+            retWa:1,      // 와석초: 와석초교 출발 → 한빛마을4.8단지(귀가 방면)
+            retWalk:5 };  // 도보: 한빛마을4.8단지 → 운정가구공단
+const GN_KEYS = ['rideHan','rideGagu','ride82','bikeHan','retSub','retWa','retWalk'], LS_GN = 'bus084.gn';
 try { const v = JSON.parse(localStorage.getItem(LS_GN) || '{}');
       GN_KEYS.forEach(k => { if (Number.isFinite(v[k])) S[k] = v[k]; }); } catch (e) {}
 const D = { t:'', ovYa:'', ovUn:'', ovHau:'' };   // 미적용 입력값
@@ -257,6 +265,8 @@ const STN = { hauYa:229000976,   // 하우개마을 30881 (야당역·와석초 
               hauUn:229002511,   // 하우개마을 30120 (운정역 방면)
               hanbit:229001506,  // 한빛마을4.8단지 31623 (G7426 강남 방면)
               gagu:229002604,    // 운정가구공단 31452 (084 → 082 환승)
+              hanbitBack:229001505, // 한빛마을4.8단지 31624 (G7426 귀가 하차, 하우개마을 방면)
+              gaguBack:229002605,   // 운정가구공단 31453 (하우개마을 방면, 084 계열 전부 정차)
               ya:229002806,      // 야당역
               un:229002362 };    // 운정역
 const RT = {};                   // stationId → { at, list, err }
@@ -285,7 +295,8 @@ async function rtGet(id) {
 function rtPoll() {
   if (!rtKey || document.hidden) return;
   (S.mode === 'gn'  ? [STN.hauYa, STN.gagu, STN.hanbit]
- : S.mode === 'out' ? [STN.hauYa, STN.hauUn] : [STN.ya, STN.un]).forEach(rtGet);
+ : S.mode === 'out' ? [STN.hauYa, STN.hauUn]
+ : S.ret === 'bus'  ? [STN.hanbitBack, STN.gaguBack] : [STN.ya, STN.un]).forEach(rtGet);
 }
 // 한 줄 표시. 키가 없으면 아무것도 그리지 않는다.
 function rtHtml(id, names, label, seat, bare) {
@@ -353,11 +364,13 @@ function gnHtml(nowMin, we) {
   const t0 = parseHM(S.t) ?? nowMin + S.walkHau;
   const toHau = RIDE.unToHau.base;
   const nm = n => n === '084(와석초)' ? '와석초' : n;
-  const G = rtTimes(STN.hanbit, ['G7426'], nowMin);
+  // 입력한 시각이 지금과 30분 넘게 떨어져 있으면 실시간은 판단에 쓰지 않는다(표시만).
+  const live = (id, names) => Math.abs(t0 - nowMin) <= 30 ? rtTimes(id, names, nowMin) : null;
+  const G = live(STN.hanbit, ['G7426']);
   const MARGIN = 2;   // 한빛마을4.8단지 도착 후 G7426까지 최소 여유(분)
 
   const board = (names, list) => {
-    const L = rtTimes(STN.hauYa, names, nowMin);
+    const L = live(STN.hauYa, names);
     const a = L && L.find(x => x.t >= t0);
     if (a) return { t: a.t, name: nm(a.name), live: true };
     const p = pick(list, t0, () => toHau);
@@ -367,7 +380,7 @@ function gnHtml(nowMin, we) {
   const C = [];
   const d = board(['084-1','084(와석초)'], F_WA);
   if (d) {
-    const H = rtTimes(STN.hanbit, ['084-1','084(와석초)'], nowMin);
+    const H = live(STN.hanbit, ['084-1','084(와석초)']);
     const h = d.live && H ? H.find(x => x.t >= d.t + 2) : null;
     C.push({ key:'direct', title: d.name + ' 직행', go: d.t, live: d.live,
              arr: h ? h.t : d.t + S.rideHan, note: '' });
@@ -376,7 +389,7 @@ function gnHtml(nowMin, we) {
   const b = board(['084'], F_UN);
   if (b) {
     const gagu = b.t + S.rideGagu;
-    const R = rtTimes(STN.gagu, ['082'], nowMin);
+    const R = live(STN.gagu, ['082']);
     const r = R ? R.find(x => x.t >= gagu) : null;
     C.push({ key:'xfer', title:'084 → 082 환승', go: b.t, live: b.live, arr: r ? r.t + S.ride82 : null,
              note: '운정가구공단 ' + fmt(gagu) + ' 하차 → ' + (r ? '082 ' + fmt(r.t) : '082 도착 정보 없음') });
@@ -441,6 +454,59 @@ function gnHtml(nowMin, we) {
     + rtRow(STN.hanbit, ['G7426'], nowMin, true)
     + '<div class="sub">시간표 없음 · 배차 ' + (day === 6 ? '30~40분' : we ? '30~50분' : '15~30분')
     + ' · 당하동 출발 후에만 표시</div></div>';
+  return html;
+}
+
+// ── G7426으로 귀가 : 한빛마을4.8단지 하차 → 하우개마을 ──────────────────
+// A안 내린 자리에서 084-1·와석초 / B안 운정가구공단까지 걸어가 084 계열 아무거나.
+// 승차 시각은 실시간이 있으면 실시간, 없으면 "야당역 출발" 표에 추정 소요를 더한 값.
+function retHtml(nowMin, we) {
+  const t0 = parseHM(S.t) ?? nowMin;                 // 한빛마을4.8단지 하차 시각
+  const toHan = d => d.dep + (d.kind === 'sub' ? S.retSub : S.retWa);
+  const all = Object.keys(YADANG).flatMap(h => YADANG[h].map(([m,k]) => ({dep:+h*60+m, kind:k})));
+  const LA = all.filter(d => d.kind === 'sub' || d.kind === 'wa')
+                .map(d => ({ t: toHan(d), kind: d.kind })).sort((a,b) => a.t - b.t);
+  const LB = all.filter(d => d.kind !== 'night')
+                .map(d => ({ t: d.kind === 'base' ? d.dep + RIDE.yaToHau.base - S.rideGagu : toHan(d) + 1,
+                             kind: d.kind })).sort((a,b) => a.t - b.t);
+  const nm = n => n === '084(와석초)' ? '와석초' : n;
+  const next = (list, r) => {
+    if (r < 180) { const late = list.find(d => d.t >= r + 1440); if (late) return { ...late, t: late.t - 1440 }; }
+    return list.find(d => d.t >= r) || null;
+  };
+  const board = (id, names, list, r) => {
+    // 입력한 시각이 지금과 30분 넘게 떨어져 있으면 실시간은 판단에 쓰지 않는다(표시만).
+    const L = Math.abs(t0 - nowMin) <= 30 ? rtTimes(id, names, nowMin) : null;
+    const a = L && L.find(x => x.t >= r);
+    if (a) return { t: a.t, name: nm(a.name), live: true };
+    const p = next(list, r);
+    return p ? { t: p.t, name: KIND[p.kind], live: false } : null;
+  };
+  const rB = t0 + S.retWalk;
+  const C = [
+    { key:'한빛마을4.8단지에서 바로', ready:t0, ride:S.rideHan, id:STN.hanbitBack,
+      names:['084-1','084(와석초)'], b: board(STN.hanbitBack, ['084-1','084(와석초)'], LA, t0) },
+    { key:'운정가구공단까지 걸어서 (도보 '+S.retWalk+'분)', ready:rB, ride:S.rideGagu, id:STN.gaguBack,
+      names:['084','084-1','084(와석초)'], b: board(STN.gaguBack, ['084','084-1','084(와석초)'], LB, rB) },
+  ];
+  C.forEach(c => { c.arr = c.b ? c.b.t + c.ride : null; });
+  const ok = C.filter(c => c.arr != null);
+  const best = ok.length ? ok.reduce((x, y) => y.arr < x.arr ? y : x) : null;   // 같으면 A안
+
+  let html = '';
+  C.forEach(c => {
+    const win = c === best;
+    html += '<div class="card'+(win?' win':'')+'"><div class="lbl">'+c.key+(win?'  ← 하우개마을 도착 최속':'')+'</div>';
+    if (c.b) {
+      html += '<div class="big">'+fmt(c.b.t)+'<span>'+c.b.name+' 승차 · '+(c.b.live?'실시간':'시간표 추정')+'</span></div>'
+        + '<div class="sub">지금부터 '+Math.max(0, Math.ceil(c.b.t - nowMin))+'분 후 · 내 도착 '+fmt(c.ready)
+        + ' 기준 <b>대기 '+Math.max(0, Math.round(c.b.t - c.ready))+'분</b> · 하우개마을 <b>'+fmt(c.arr)+'</b>'
+        + (we && c.b.name === '와석초' && !c.b.live ? '<br>와석초 편의 주말 운행 여부는 미확인' : '') + '</div>';
+    } else html += '<div class="sub">오늘 남은 편 없음</div>';
+    html += rtRow(c.id, c.names, nowMin) + '</div>';
+  });
+  html += '<div class="card"><div class="lbl">G7426 · 한빛마을4.8단지 도착 (귀가 방면)</div>'
+    + rtRow(STN.hanbitBack, ['G7426'], nowMin) + '</div>';
   return html;
 }
 
@@ -509,15 +575,20 @@ function render() {
   const we = isWeekendLike(now);
 
   document.getElementById('tLabel').textContent =
-    S.mode==='home' ? '야당역 하차' : '정류장 도착';   // 강남 화면도 하우개마을 정류장 도착 기준
+    S.mode==='home' ? (S.ret==='bus' ? '한빛마을 하차' : '야당역 하차')
+                    : '정류장 도착';   // 강남 화면도 하우개마을 정류장 도착 기준
+  document.getElementById('retRow').style.display = S.mode==='home' ? 'flex' : 'none';
   document.getElementById('dirRow').style.display = S.mode==='out' ? 'flex' : 'none';
   document.getElementById('nowTxt').textContent = S.t ? '' : '현재 '+fmt(nowMin)+' 기준';
 
-  const P = S.mode === 'gn' ? [] : plans(nowMin, we);
+  const busRet = S.mode === 'home' && S.ret === 'bus';
+  const P = (S.mode === 'gn' || busRet) ? [] : plans(nowMin, we);
   let html = '';
 
   if (S.mode === 'gn') {
     html = gnHtml(nowMin, we);
+  } else if (busRet) {
+    html = retHtml(nowMin, we);
   } else if (S.mode === 'out') {
     // ── 하우개마을 → 역 : 버스 2안 + 전기자전거를 열차 시각으로 비교 ──────
     const t0 = P.length ? P[0].ready
@@ -609,6 +680,13 @@ function render() {
       + '082 한 정류소 <input type="number" data-cfg="ride82" value="'+S.ride82+'">분 · '
       + '전기자전거 → 한빛마을4.8단지 <input type="number" data-cfg="bikeHan" value="'+S.bikeHan+'">분'
       + '<br><span style="opacity:.7">소요시간은 추정 기본값. 고치면 이 기기에 저장됩니다.</span>'
+    : busRet
+    ? '도보 한빛마을4.8단지 → 운정가구공단 <input type="number" data-cfg="retWalk" value="'+S.retWalk+'">분<br>'
+      + '084-1 야당역 출발 → 한빛마을 <input type="number" data-cfg="retSub" value="'+S.retSub+'">분 · '
+      + '와석초 <input type="number" data-cfg="retWa" value="'+S.retWa+'">분<br>'
+      + '버스 한빛마을 → 하우개마을 <input type="number" data-cfg="rideHan" value="'+S.rideHan+'">분 · '
+      + '운정가구공단 → 하우개마을 <input type="number" data-cfg="rideGagu" value="'+S.rideGagu+'">분'
+      + '<br><span style="opacity:.7">소요시간은 추정 기본값. 고치면 이 기기에 저장됩니다.</span>'
     : S.mode==='home'
     ? '야당역 도보 <input type="number" data-cfg="walkYa" value="'+S.walkYa+'">분 · '
       + '운정역 도보 <input type="number" data-cfg="walkUn" value="'+S.walkUn+'">분 · '
@@ -680,6 +758,12 @@ function locate(first) {
 document.getElementById('modeRow').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   S.mode = b.dataset.mode;
+  [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x === b));
+  render(); rtPoll();
+});
+document.getElementById('retRow').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  S.ret = b.dataset.ret;
   [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x === b));
   render(); rtPoll();
 });
