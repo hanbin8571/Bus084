@@ -88,6 +88,7 @@
 <div class="row" id="modeRow">
   <button data-mode="home" class="on">역 → 하우개마을</button>
   <button data-mode="out">하우개마을 → 역</button>
+  <button data-mode="gn">강남 G7426</button>
 </div>
 <div class="row" id="dirRow" style="display:none">
   <button data-dir="S" class="on">서울·용문 방면</button>
@@ -111,7 +112,8 @@
   <span id="keyState"></span>
 </div>
 <div class="foot">
-  역 연결 카드는 084만 사용(심야 편 제외). 084-1·와석초 편은 한빛마을4.8단지 방면 카드에 표시.<br>
+  역 연결 카드는 084만 사용(심야 편 제외). 084-1·와석초·082·G7426은 강남 G7426 화면에 표시.<br>
+  강남 화면의 버스·자전거 소요시간은 추정 기본값이며 화면 아래에서 고칠 수 있습니다.<br>
   버스 소요시간은 실측 기준(야당 7분 / 운정 8분). 실시간 키는 이 기기에만 저장됩니다.<br>
   열차 시간표는 2025.5.1 시행 플랫폼 게시본이며 급행 구분은 반영되지 않았습니다.<br>공휴일 목록은 2027년까지 수록. 이후에는 코드의 HOLIDAYS를 갱신하십시오.
 </div>
@@ -194,6 +196,9 @@ const F_UN = flat(UNJEONG), F_YA = flat(YADANG);
 const F_WA = Object.keys(UNJEONG).flatMap(h =>
   UNJEONG[h].filter(([,k]) => k==='sub' || k==='wa').map(([m,k]) => ({dep:+h*60+m, kind:k}))
 ).sort((a,b)=>a.dep-b.dep);
+const F_ALL = Object.keys(UNJEONG).flatMap(h =>
+  UNJEONG[h].filter(([,k]) => k!=='night').map(([m,k]) => ({dep:+h*60+m, kind:k}))
+).sort((a,b)=>a.dep-b.dep);
 const KIND = { base:'084', sub:'084-1', wa:'와석초', night:'심야' };
 
 const fmt = t => { const r = Math.round(t);
@@ -224,7 +229,15 @@ const isWeekendLike = d => {
 // ── 상태 ────────────────────────────────────────────────────────────────
 const S = { mode: 'home',
             dir:'S', t:'', ovYa:'', ovUn:'', ovHau:'',
-            walkYa:2, walkUn:2, walkHau:3, train:2 };
+            walkYa:2, walkUn:2, walkHau:3, train:2,
+            // 강남 화면용 소요시간(분). 실측 전 추정 기본값 — 기기에 저장된 값이 있으면 그것을 쓴다.
+            rideHan:5,    // 하우개마을 → 한빛마을4.8단지 (084-1·와석초)
+            rideGagu:4,   // 하우개마을 → 운정가구공단 (084)
+            ride82:2,     // 운정가구공단 → 한빛마을4.8단지 (082, 한 정류소)
+            bikeHan:7 };  // 전기자전거 → 한빛마을4.8단지
+const GN_KEYS = ['rideHan','rideGagu','ride82','bikeHan'], LS_GN = 'bus084.gn';
+try { const v = JSON.parse(localStorage.getItem(LS_GN) || '{}');
+      GN_KEYS.forEach(k => { if (Number.isFinite(v[k])) S[k] = v[k]; }); } catch (e) {}
 const D = { t:'', ovYa:'', ovUn:'', ovHau:'' };   // 미적용 입력값
 
 // 00:00~03:00 사이에는 전날 24시대 편성도 유효하다
@@ -243,6 +256,7 @@ const LS_KEY = 'bus084.gbisKey';
 const STN = { hauYa:229000976,   // 하우개마을 30881 (야당역·와석초 방면)
               hauUn:229002511,   // 하우개마을 30120 (운정역 방면)
               hanbit:229001506,  // 한빛마을4.8단지 31623 (G7426 강남 방면)
+              gagu:229002604,    // 운정가구공단 31452 (084 → 082 환승)
               ya:229002806,      // 야당역
               un:229002362 };    // 운정역
 const RT = {};                   // stationId → { at, list, err }
@@ -270,7 +284,8 @@ async function rtGet(id) {
 }
 function rtPoll() {
   if (!rtKey || document.hidden) return;
-  (S.mode === 'out' ? [STN.hauYa, STN.hauUn, STN.hanbit] : [STN.ya, STN.un]).forEach(rtGet);
+  (S.mode === 'gn'  ? [STN.hauYa, STN.gagu, STN.hanbit]
+ : S.mode === 'out' ? [STN.hauYa, STN.hauUn] : [STN.ya, STN.un]).forEach(rtGet);
 }
 // 한 줄 표시. 키가 없으면 아무것도 그리지 않는다.
 function rtHtml(id, names, label, seat, bare) {
@@ -296,6 +311,139 @@ function rtHtml(id, names, label, seat, bare) {
   }
   return '<div class="rt">' + label + ' ' + body + '</div>';
 }
+// 실시간 도착을 절대 시각(분)으로 바꾼 목록. 쓸 수 없는 상태면 null.
+function rtTimes(id, names, nowMin) {
+  const r = RT[id];
+  if (!rtKey || !r || r.err) return null;
+  const el = (Date.now() - r.at) / 60000;
+  if (el > 3) return null;
+  const out = [];
+  r.list.filter(x => names.includes(x.routeName)).forEach(x => [1,2].forEach(n => {
+    const raw = x['predictTime'+n];
+    if (raw === '' || raw == null) return;
+    const s = x['predictTimeSec'+n];
+    const min = (s === '' || s == null) ? Number(raw) : Number(s) / 60;
+    const st = x['remainSeatCnt'+n];
+    out.push({ name: x.routeName, t: nowMin + Math.max(0, min - el), loc: x['locationNo'+n],
+               seat: (st !== '' && st != null && Number(st) >= 0) ? Number(st) : null });
+  }));
+  return out.sort((a,b) => a.t - b.t);
+}
+// 강남 화면용: 도착 시각까지 적는 실시간 줄
+function rtRow(id, names, nowMin, seat) {
+  let body;
+  const r = RT[id];
+  if (!rtKey) body = '키 없음 — 화면 아래에서 저장';
+  else if (!r) body = '조회 중';
+  else if (r.err) body = '조회 실패 (' + esc(r.err) + ')';
+  else {
+    const L = rtTimes(id, names, nowMin);
+    body = !L ? '갱신 지연' : !L.length ? '도착 예정 없음'
+      : L.map(a => esc(a.name) + ' <b>' + fmt(a.t) + '</b> (' + Math.max(0, Math.ceil(a.t - nowMin)) + '분 후'
+          + (a.loc !== '' && a.loc != null ? ', ' + esc(a.loc) + '정류소 전' : '')
+          + (seat && a.seat != null ? ', 빈자리 ' + a.seat : '') + ')').join(' / ');
+  }
+  return '<div class="rt">실시간 ' + body + '</div>';
+}
+
+// ── 강남 G7426 화면 : 집 → 한빛마을4.8단지 → G7426 ──────────────────────
+// 후보 3안(직행 084-1·와석초 / 084 후 082 환승 / 전기자전거)을 G7426 탑승 시각으로 비교한다.
+// 하우개마을 승차 시각은 실시간이 있으면 실시간, 없으면 시간표(운정역 출발 + 8분).
+function gnHtml(nowMin, we) {
+  const t0 = parseHM(S.t) ?? nowMin + S.walkHau;
+  const toHau = RIDE.unToHau.base;
+  const nm = n => n === '084(와석초)' ? '와석초' : n;
+  const G = rtTimes(STN.hanbit, ['G7426'], nowMin);
+  const MARGIN = 2;   // 한빛마을4.8단지 도착 후 G7426까지 최소 여유(분)
+
+  const board = (names, list) => {
+    const L = rtTimes(STN.hauYa, names, nowMin);
+    const a = L && L.find(x => x.t >= t0);
+    if (a) return { t: a.t, name: nm(a.name), live: true };
+    const p = pick(list, t0, () => toHau);
+    return p ? { t: p.dep + toHau, name: KIND[p.kind], live: false } : null;
+  };
+
+  const C = [];
+  const d = board(['084-1','084(와석초)'], F_WA);
+  if (d) {
+    const H = rtTimes(STN.hanbit, ['084-1','084(와석초)'], nowMin);
+    const h = d.live && H ? H.find(x => x.t >= d.t + 2) : null;
+    C.push({ key:'direct', title: d.name + ' 직행', go: d.t, live: d.live,
+             arr: h ? h.t : d.t + S.rideHan, note: '' });
+  } else C.push({ key:'direct', title:'084-1·와석초 직행', go:null, arr:null, note:'오늘 남은 편 없음' });
+
+  const b = board(['084'], F_UN);
+  if (b) {
+    const gagu = b.t + S.rideGagu;
+    const R = rtTimes(STN.gagu, ['082'], nowMin);
+    const r = R ? R.find(x => x.t >= gagu) : null;
+    C.push({ key:'xfer', title:'084 → 082 환승', go: b.t, live: b.live, arr: r ? r.t + S.ride82 : null,
+             note: '운정가구공단 ' + fmt(gagu) + ' 하차 → ' + (r ? '082 ' + fmt(r.t) : '082 도착 정보 없음') });
+  } else C.push({ key:'xfer', title:'084 → 082 환승', go:null, arr:null, note:'오늘 남은 084 없음' });
+
+  C.push({ key:'bike', title:'전기자전거', go: t0, live:false, arr: t0 + S.bikeHan, note:'' });
+  C.forEach(c => { c.g = (G && c.arr != null) ? (G.find(g => g.t >= c.arr + MARGIN) || null) : null; });
+
+  // 순위: G7426 탑승이 이른 쪽. 같으면 직행 > 자전거 > 환승. G7426 정보가 없으면 도착이 빠른 쪽.
+  const withG = C.filter(c => c.g);
+  let best, basis;
+  if (withG.length) {
+    const m = Math.min(...withG.map(c => c.g.t));
+    const tie = withG.filter(c => c.g.t === m);
+    best = ['direct','bike','xfer'].map(k => tie.find(c => c.key === k)).find(Boolean);
+    basis = 'G7426 탑승이 가장 이른 경로';
+  } else {
+    const wa = C.filter(c => c.arr != null);
+    best = wa.reduce((x, y) => y.arr < x.arr ? y : x);
+    basis = 'G7426 도착 정보 없음 · 한빛마을 도착이 빠른 순';
+  }
+
+  const src = c => c.key === 'bike' ? '출발' : '하우개마을 승차 · ' + (c.live ? '실시간' : '시간표');
+  const line = c => {
+    if (c.go == null) return c.note;
+    let x = (c.note ? c.note + ' · ' : '');
+    if (c.arr == null) return x + '한빛마을4.8단지 도착 시각 알 수 없음';
+    x += '한빛마을4.8단지 <b>' + fmt(c.arr) + '</b> 도착';
+    if (c.g) {
+      const slack = Math.floor(c.g.t - c.arr);
+      x += ' → G7426 <b>' + fmt(c.g.t) + '</b> (여유 ' + slack + '분' + (slack <= 3 ? ', 빠듯' : '')
+        + (c.g.seat != null ? ', 빈자리 ' + c.g.seat : '') + ')';
+    } else if (G) x += ' → 그 뒤 G7426 정보 없음';
+    return x;
+  };
+
+  let html = '<div class="card win"><div class="lbl">종합 · ' + basis + '</div>'
+    + '<div class="big">' + fmt(best.go) + '<span>' + best.title + ' · ' + src(best) + '</span></div>'
+    + '<div class="sub">지금부터 ' + Math.max(0, Math.ceil(best.go - nowMin)) + '분 후 · ' + line(best) + '</div>'
+    + '<div class="trn">' + C.filter(c => c !== best).map(c =>
+        '<b>' + c.title + '</b> ' + (c.go == null ? '' : fmt(c.go) + ' ' + src(c) + '<br>') + line(c)
+      ).join('<br>') + '</div></div>';
+
+  // 084 계열
+  const up = F_ALL.filter(x => x.dep + toHau >= t0).slice(0, 5);
+  html += '<div class="card"><div class="lbl">084 계열 · 하우개마을 (야당·와석초 방면)</div>'
+    + rtRow(STN.hauYa, ['084','084-1','084(와석초)'], nowMin)
+    + '<div class="sub">시간표 ' + (up.length ? up.map(x => {
+        const t = fmt(x.dep + toHau) + ' ' + KIND[x.kind];
+        return x.kind === 'base' ? t : '<b>' + t + '</b>'; }).join(' · ') : '오늘 남은 편 없음')
+    + '<br>굵은 글씨는 한빛마을4.8단지 직행, 084는 운정가구공단까지'
+    + (we ? '<br>와석초 편의 주말 운행 여부는 미확인' : '') + '</div></div>';
+
+  // 082
+  html += '<div class="card"><div class="lbl">082 · 운정가구공단 → 한빛마을4.8단지 (한 정류소)</div>'
+    + rtRow(STN.gagu, ['082'], nowMin)
+    + '<div class="sub">시간표 없음 · 배차 ' + (we ? '25~60분' : '15~30분') + ' · 운정역 출발 후에만 표시</div></div>';
+
+  // G7426
+  const day = new Date().getDay();
+  html += '<div class="card"><div class="lbl">G7426 · 한빛마을4.8단지 (강남 방면)</div>'
+    + rtRow(STN.hanbit, ['G7426'], nowMin, true)
+    + '<div class="sub">시간표 없음 · 배차 ' + (day === 6 ? '30~40분' : we ? '30~50분' : '15~30분')
+    + ' · 당하동 출발 후에만 표시</div></div>';
+  return html;
+}
+
 function paintKey() {
   document.getElementById('keyState').textContent = rtKey ? '· 저장됨' : '· 없음 (실시간 표시 꺼짐)';
 }
@@ -361,14 +509,16 @@ function render() {
   const we = isWeekendLike(now);
 
   document.getElementById('tLabel').textContent =
-    S.mode==='home' ? '야당역 하차' : '정류장 도착';
+    S.mode==='home' ? '야당역 하차' : '정류장 도착';   // 강남 화면도 하우개마을 정류장 도착 기준
   document.getElementById('dirRow').style.display = S.mode==='out' ? 'flex' : 'none';
   document.getElementById('nowTxt').textContent = S.t ? '' : '현재 '+fmt(nowMin)+' 기준';
 
-  const P = plans(nowMin, we);
+  const P = S.mode === 'gn' ? [] : plans(nowMin, we);
   let html = '';
 
-  if (S.mode === 'out') {
+  if (S.mode === 'gn') {
+    html = gnHtml(nowMin, we);
+  } else if (S.mode === 'out') {
     // ── 하우개마을 → 역 : 버스 2안 + 전기자전거를 열차 시각으로 비교 ──────
     const t0 = P.length ? P[0].ready
              : (parseHM(S.ovHau) ?? parseHM(S.t) ?? nowMin + S.walkHau);
@@ -420,25 +570,6 @@ function render() {
     });
     if (!P.length) html += '<div style="color:#6A5E4C;font-size:12.5px">버스 운행 종료</div>';
 
-    // ── 한빛마을4.8단지 방면 (084-1·와석초) : G7426 환승용 ────────────────
-    const toHau = RIDE.unToHau.base;
-    const w = pick(F_WA, t0, () => toHau);
-    html += '<div class="card"><div class="lbl">한빛마을4.8단지 방면 · G7426 환승</div>';
-    if (w) {
-      const bd = w.dep + toHau;
-      const nx = F_WA.find(d => d.dep > w.dep);
-      html += '<div class="big">'+fmt(bd)+'<span>'+KIND[w.kind]+' 출발</span></div>'
-        + '<div class="sub">지금부터 '+Math.max(0, Math.ceil(bd - nowMin))+'분 후 · 내 도착 '+fmt(t0)
-        + ' 기준 <b>대기 '+Math.max(0, Math.round(bd - t0))+'분</b>'
-        + (nx ? ' · 다음 '+fmt(nx.dep + toHau)+' '+KIND[nx.kind] : '')
-        + (we && w.kind === 'wa' ? '<br>와석초 편의 주말 운행 여부는 미확인' : '')
-        + '</div>';
-    } else {
-      html += '<div class="sub">오늘 남은 084-1·와석초 편 없음</div>';
-    }
-    html += rtHtml(STN.hauYa, ['084-1','084(와석초)'], '실시간')
-      + rtHtml(STN.hanbit, ['G7426'], 'G7426 · 한빛마을4.8단지 도착', true, true)
-      + '</div>';
 
   } else {
     // ── 역 → 하우개마을 : 대기시간 최소 ────────────────────────────────
@@ -470,7 +601,15 @@ function render() {
 
   document.getElementById('cards').innerHTML = html;
 
-  const cfg = S.mode==='home'
+  const cfg = S.mode==='gn'
+    ? '집 → 정류장 도보 <input type="number" data-cfg="walkHau" value="'+S.walkHau+'">분'
+      + ' <span style="opacity:.7">(시각 미입력 시에만 적용)</span><br>'
+      + '하우개마을 → 한빛마을4.8단지 버스 <input type="number" data-cfg="rideHan" value="'+S.rideHan+'">분 · '
+      + '→ 운정가구공단 <input type="number" data-cfg="rideGagu" value="'+S.rideGagu+'">분<br>'
+      + '082 한 정류소 <input type="number" data-cfg="ride82" value="'+S.ride82+'">분 · '
+      + '전기자전거 → 한빛마을4.8단지 <input type="number" data-cfg="bikeHan" value="'+S.bikeHan+'">분'
+      + '<br><span style="opacity:.7">소요시간은 추정 기본값. 고치면 이 기기에 저장됩니다.</span>'
+    : S.mode==='home'
     ? '야당역 도보 <input type="number" data-cfg="walkYa" value="'+S.walkYa+'">분 · '
       + '운정역 도보 <input type="number" data-cfg="walkUn" value="'+S.walkUn+'">분 · '
       + '전철 야당↔운정 <input type="number" data-cfg="train" value="'+S.train+'">분'
@@ -569,6 +708,9 @@ document.getElementById('cards').addEventListener('click', e => {
 document.getElementById('cfg').addEventListener('input', e => {
   const k = e.target.dataset.cfg; if (!k) return;
   S[k] = Number(e.target.value) || 0;
+  if (GN_KEYS.includes(k)) {
+    try { localStorage.setItem(LS_GN, JSON.stringify(Object.fromEntries(GN_KEYS.map(g => [g, S[g]])))); } catch (err) {}
+  }
   document.getElementById('cards').innerHTML = '';   // 다음 초에 재계산
 });
 document.getElementById('cfg').addEventListener('change', () => render());
