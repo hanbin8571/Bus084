@@ -77,6 +77,9 @@
           padding: 9px 11px; font-size: 12.5px; margin-bottom: 7px; line-height: 1.45; }
   .cfg { margin-top: 12px; font-size: 11.5px; color: #6A5E4C; line-height: 1.9;
          border-top: 1px solid #DCD1BC; padding-top: 9px; }
+  .rt { margin-top: 6px; font-size: 11.5px; color: #3F7A5E; line-height: 1.45; }
+  .card.win .rt { color: #9FD3B8; }
+  #keyIn { width: 150px; }
   .foot { margin-top: 9px; font-size: 9.5px; color: #9A8D77; line-height: 1.55; }
 </style>
 </head>
@@ -101,8 +104,15 @@
 <div id="geoRaw" style="font-size:9.5px;color:#9A8D77;margin-top:3px"></div>
 <div id="cards" style="margin-top:9px"></div>
 <div class="cfg" id="cfg"></div>
+<div class="cfg" id="keyBox">
+  실시간 키 <input type="password" id="keyIn" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <button class="sm" id="keySave">저장</button>
+  <button class="sm" id="keyDel">삭제</button>
+  <span id="keyState"></span>
+</div>
 <div class="foot">
-  084-1·와석초·심야 편은 제외. 버스 소요시간은 실측 기준(야당 7분 / 운정 8분).<br>
+  역 연결 카드는 084만 사용(심야 편 제외). 084-1·와석초 편은 한빛마을4.8단지 방면 카드에 표시.<br>
+  버스 소요시간은 실측 기준(야당 7분 / 운정 8분). 실시간 키는 이 기기에만 저장됩니다.<br>
   열차 시간표는 2025.5.1 시행 플랫폼 게시본이며 급행 구분은 반영되지 않았습니다.<br>공휴일 목록은 2027년까지 수록. 이후에는 코드의 HOLIDAYS를 갱신하십시오.
 </div>
 
@@ -180,6 +190,11 @@ const flat = t => Object.keys(t).flatMap(h =>
   t[h].filter(([,k]) => k==='base').map(([m,k]) => ({dep:+h*60+m, kind:k}))
 ).sort((a,b)=>a.dep-b.dep);
 const F_UN = flat(UNJEONG), F_YA = flat(YADANG);
+// 한빛마을4.8단지(G7426 환승)까지 가는 편 = 운정역발 084-1·와석초. 하우개마을까지는 084와 같은 길.
+const F_WA = Object.keys(UNJEONG).flatMap(h =>
+  UNJEONG[h].filter(([,k]) => k==='sub' || k==='wa').map(([m,k]) => ({dep:+h*60+m, kind:k}))
+).sort((a,b)=>a.dep-b.dep);
+const KIND = { base:'084', sub:'084-1', wa:'와석초', night:'심야' };
 
 const fmt = t => { const r = Math.round(t);
   return String(Math.floor(r/60)%24).padStart(2,'0')+':'+String(r%60).padStart(2,'0'); };
@@ -221,6 +236,69 @@ const pick = (list, r, off) => {
   }
   return list.find(d => key(d) >= r) || null;
 };
+
+// ── 실시간 도착 (경기도 버스도착정보) ───────────────────────────────────
+// 인증키는 저장소에 두지 않고 이 기기의 localStorage 에만 저장한다.
+const LS_KEY = 'bus084.gbisKey';
+const STN = { hauYa:229000976,   // 하우개마을 30881 (야당역·와석초 방면)
+              hauUn:229002511,   // 하우개마을 30120 (운정역 방면)
+              hanbit:229001506,  // 한빛마을4.8단지 31623 (G7426 강남 방면)
+              ya:229002806,      // 야당역
+              un:229002362 };    // 운정역
+const RT = {};                   // stationId → { at, list, err }
+let rtKey = '';
+try { rtKey = localStorage.getItem(LS_KEY) || ''; } catch (e) {}
+const esc = v => String(v).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+
+async function rtGet(id) {
+  const prev = RT[id];
+  if (prev && Date.now() - prev.at < 20000) return;
+  try {
+    const res = await fetch('https://apis.data.go.kr/6410000/busarrivalservice/v2/getBusArrivalListv2'
+      + '?format=json&stationId=' + id + '&serviceKey=' + encodeURIComponent(rtKey));
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const j = await res.json();
+    const h = j && j.response && j.response.msgHeader;
+    const code = h ? Number(h.resultCode) : -1;
+    if (code !== 0 && code !== 4) throw new Error(h ? h.resultMessage : '응답 형식 오류');
+    let L = (j.response.msgBody && j.response.msgBody.busArrivalList) || [];
+    if (!Array.isArray(L)) L = [L];
+    RT[id] = { at: Date.now(), list: L, err: '' };
+  } catch (e) {
+    RT[id] = { at: Date.now(), list: [], err: String(e && e.message || e).slice(0, 40) };
+  }
+}
+function rtPoll() {
+  if (!rtKey || document.hidden) return;
+  (S.mode === 'out' ? [STN.hauYa, STN.hauUn, STN.hanbit] : [STN.ya, STN.un]).forEach(rtGet);
+}
+// 한 줄 표시. 키가 없으면 아무것도 그리지 않는다.
+function rtHtml(id, names, label, seat, bare) {
+  if (!rtKey) return '';
+  const r = RT[id];
+  let body;
+  if (!r) body = '조회 중';
+  else if (r.err) body = '조회 실패 (' + esc(r.err) + ')';
+  else {
+    const el = (Date.now() - r.at) / 60000;
+    const parts = [];
+    r.list.filter(x => names.includes(x.routeName)).forEach(x => [1,2].forEach(n => {
+      const raw = x['predictTime'+n];
+      if (raw === '' || raw == null) return;
+      const s = x['predictTimeSec'+n];
+      const min = (s === '' || s == null) ? Number(raw) : Number(s) / 60;
+      const loc = x['locationNo'+n], st = x['remainSeatCnt'+n];
+      parts.push((bare ? '' : esc(x.routeName) + ' ') + Math.max(0, Math.ceil(min - el)) + '분 후'
+        + (loc !== '' && loc != null ? ' (' + esc(loc) + '정류소 전)' : '')
+        + (seat && st !== '' && st != null && Number(st) >= 0 ? ' 빈자리 ' + esc(st) : ''));
+    }));
+    body = el > 3 ? '갱신 지연' : parts.length ? parts.join(' / ') : '도착 예정 없음';
+  }
+  return '<div class="rt">' + label + ' ' + body + '</div>';
+}
+function paintKey() {
+  document.getElementById('keyState').textContent = rtKey ? '· 저장됨' : '· 없음 (실시간 표시 꺼짐)';
+}
 
 function plans(nowMin, we) {
   const t0 = parseHM(S.t) ?? nowMin;
@@ -333,11 +411,34 @@ function render() {
           + '<input type="time" lang="en-GB" data-ov="'+c.ovKey+'" value="'+(D[c.ovKey]||'')+'" >'
           + (S[c.ovKey] ? '<button class="sm" data-clr="'+c.ovKey+'" style="padding:2px 6px;font-size:10.5px">자동</button>'
                         : '<span>('+fmt(c.ready)+' 자동)</span>')
-          + '<span>· '+c.dest+' '+fmt(c.arrive)+'</span></div>';
+          + '<span>· '+c.dest+' '+fmt(c.arrive)+'</span></div>'
+          + (c.stn === '야당역'
+              ? rtHtml(STN.hauYa, ['084'], '실시간')
+              : rtHtml(STN.hauUn, ['084','084-1','084(와석초)'], '실시간'));
       }
       html += '<div class="trn">플랫폼 '+fmt(c.plat)+' → '+trainHtml(c.tr)+'</div></div>';
     });
     if (!P.length) html += '<div style="color:#6A5E4C;font-size:12.5px">버스 운행 종료</div>';
+
+    // ── 한빛마을4.8단지 방면 (084-1·와석초) : G7426 환승용 ────────────────
+    const toHau = RIDE.unToHau.base;
+    const w = pick(F_WA, t0, () => toHau);
+    html += '<div class="card"><div class="lbl">한빛마을4.8단지 방면 · G7426 환승</div>';
+    if (w) {
+      const bd = w.dep + toHau;
+      const nx = F_WA.find(d => d.dep > w.dep);
+      html += '<div class="big">'+fmt(bd)+'<span>'+KIND[w.kind]+' 출발</span></div>'
+        + '<div class="sub">지금부터 '+Math.max(0, Math.ceil(bd - nowMin))+'분 후 · 내 도착 '+fmt(t0)
+        + ' 기준 <b>대기 '+Math.max(0, Math.round(bd - t0))+'분</b>'
+        + (nx ? ' · 다음 '+fmt(nx.dep + toHau)+' '+KIND[nx.kind] : '')
+        + (we && w.kind === 'wa' ? '<br>와석초 편의 주말 운행 여부는 미확인' : '')
+        + '</div>';
+    } else {
+      html += '<div class="sub">오늘 남은 084-1·와석초 편 없음</div>';
+    }
+    html += rtHtml(STN.hauYa, ['084-1','084(와석초)'], '실시간')
+      + rtHtml(STN.hanbit, ['G7426'], 'G7426 · 한빛마을4.8단지 도착', true, true)
+      + '</div>';
 
   } else {
     // ── 역 → 하우개마을 : 대기시간 최소 ────────────────────────────────
@@ -359,7 +460,11 @@ function render() {
         + '<input type="time" lang="en-GB" data-ov="'+p.ovKey+'" value="'+(D[p.ovKey]||'')+'" >'
         + (S[p.ovKey] ? '<button class="sm" data-clr="'+p.ovKey+'" style="padding:2px 6px;font-size:10.5px">자동</button>'
                       : '<span>('+fmt(p.ready)+' 자동)</span>')
-        + '<span>· '+p.dest+' '+fmt(p.arrive)+'</span></div></div>';
+        + '<span>· '+p.dest+' '+fmt(p.arrive)+'</span></div>'
+        + (p.ovKey === 'ovYa'
+            ? rtHtml(STN.ya, ['084'], '실시간')
+            : rtHtml(STN.un, ['084','084-1','084(와석초)'], '실시간'))
+        + '</div>';
     });
   }
 
@@ -392,7 +497,7 @@ function setMode(m) {
   S.mode = m;
   [...document.getElementById('modeRow').children].forEach(b =>
     b.classList.toggle('on', b.dataset.mode === m));
-  render();
+  render(); rtPoll();
 }
 
 let geoState = 'pending', geoDist = null, geoPos = null, geoAcc = null;
@@ -437,7 +542,7 @@ document.getElementById('modeRow').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   S.mode = b.dataset.mode;
   [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x === b));
-  render();
+  render(); rtPoll();
 });
 document.getElementById('dirRow').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -476,8 +581,28 @@ locate(true);
 [...document.getElementById('modeRow').children].forEach(b =>
   b.classList.toggle('on', b.dataset.mode === S.mode));
 
+// ── 실시간 키 저장·삭제, 30초 주기 조회 ─────────────────────────────────
+document.getElementById('keySave').addEventListener('click', () => {
+  const v = document.getElementById('keyIn').value.trim(); if (!v) return;
+  rtKey = v;
+  try { localStorage.setItem(LS_KEY, v); } catch (e) {}
+  document.getElementById('keyIn').value = '';
+  Object.keys(RT).forEach(k => delete RT[k]);
+  paintKey(); render(); rtPoll();
+});
+document.getElementById('keyDel').addEventListener('click', () => {
+  rtKey = '';
+  try { localStorage.removeItem(LS_KEY); } catch (e) {}
+  Object.keys(RT).forEach(k => delete RT[k]);
+  paintKey(); render();
+});
+document.addEventListener('visibilitychange', rtPoll);
+paintKey();
+
 render();
 setInterval(render, 1000);
+rtPoll();
+setInterval(rtPoll, 30000);
 </script>
 </body>
 </html>
